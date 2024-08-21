@@ -74,7 +74,8 @@ struct kopper_swapchain {
 enum kopper_type {
    KOPPER_X11,
    KOPPER_WAYLAND,
-   KOPPER_WIN32
+   KOPPER_WIN32,
+   KOPPER_ANDROID
 };
 
 struct kopper_displaytarget
