@@ -445,6 +445,7 @@ droid_swap_interval(_EGLDisplay *disp, _EGLSurface *surf, EGLint interval)
 static void
 update_buffer_size(struct dri2_egl_surface *dri2_surf)
 {
+   _eglLog(_EGL_WARNING, "update_buffer_size: dri2_surf->buffer %p", dri2_surf->buffer);
    dri2_surf->base.Width = dri2_surf->buffer->width;
    dri2_surf->base.Height = dri2_surf->buffer->height;
 }
@@ -1024,6 +1025,8 @@ droid_swrast_get_drawable_info(struct dri_drawable *drawable,
    struct dri2_egl_surface *dri2_surf = loaderPrivate;
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(dri2_surf->base.Resource.Display);
 
+_eglLog(_EGL_WARNING, "droid_swrast_get_drawable_info: dri2_dpy %p", dri2_dpy);
+_eglLog(_EGL_WARNING, "droid_swrast_get_drawable_info: kopper %d", dri2_dpy->kopper);
    if (dri2_dpy->kopper)
       update_buffer_size(dri2_surf);
    else
