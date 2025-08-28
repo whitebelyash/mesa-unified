@@ -1115,7 +1115,7 @@ static const __DRIkopperLoaderExtension kopper_loader_extension = {
 static const __DRIextension *droid_kopper_image_loader_extensions[] = {
    &droid_image_loader_extension.base,
    &image_lookup_extension.base,
-   &use_invalidate.base,
+   // &use_invalidate.base,
    &droid_mutable_render_buffer_extension.base,
    &swrast_loader_extension.base,
    &kopper_loader_extension.base,
