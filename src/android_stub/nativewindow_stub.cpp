@@ -108,4 +108,15 @@ ANativeWindow_setSharedBufferMode(ANativeWindow *window,
 {
    return 0;
 }
+
+int32_t ANativeWindow_getWidth(ANativeWindow *window)
+{
+   return 0;
+}
+
+int32_t ANativeWindow_getHeight(ANativeWindow *window)
+{
+   return 0;
+}
+
 }

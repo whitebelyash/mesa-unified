@@ -357,6 +357,12 @@ droid_create_surface(_EGLDisplay *disp, EGLint type, _EGLConfig *conf,
       goto cleanup_surface;
    }
 
+   /* `dri2_surf->window` will be required in dri2_create_drawable for Kopper,
+    * (in kopperSetSurfaceCreateInfo), so set it in advance here.
+    */
+    if (dri2_dpy->kopper)
+        dri2_surf->window = window;
+
    if (!dri2_create_drawable(dri2_dpy, config, dri2_surf, dri2_surf))
       goto cleanup_surface;
 
@@ -443,11 +449,17 @@ droid_swap_interval(_EGLDisplay *disp, _EGLSurface *surf, EGLint interval)
 }
 
 static void
+droid_get_window_size(struct dri2_egl_surface *dri2_surf, int *w, int *h) {
+   struct ANativeWindow* window = dri2_surf->window;
+
+   *w = ANativeWindow_getWidth(window);
+   *h = ANativeWindow_getHeight(window);
+}
+
+static void
 update_buffer_size(struct dri2_egl_surface *dri2_surf)
 {
-   _eglLog(_EGL_WARNING, "update_buffer_size: dri2_surf->buffer %p", dri2_surf->buffer);
-   dri2_surf->base.Width = dri2_surf->buffer->width;
-   dri2_surf->base.Height = dri2_surf->buffer->height;
+   droid_get_window_size(dri2_surf, &dri2_surf->base.Width, &dri2_surf->base.Height);
 }
 
 static int
@@ -572,7 +584,7 @@ droid_image_get_buffers(struct dri_drawable *driDrawable, unsigned int format,
       return 0;
 
    if (_eglSurfaceInSharedBufferMode(&dri2_surf->base)) {
-      if (get_back_bo(dri2_surf) < 0)
+      if (!dri2_dpy->kopper && get_back_bo(dri2_surf) < 0)
          return 0;
 
       /* We have dri_image_back because this is a window surface and
@@ -587,7 +599,7 @@ droid_image_get_buffers(struct dri_drawable *driDrawable, unsigned int format,
    }
 
    if (buffer_mask & __DRI_IMAGE_BUFFER_FRONT) {
-      if (get_front_bo(dri2_surf, format) < 0)
+      if (!dri2_dpy->kopper && get_front_bo(dri2_surf, format) < 0)
          return 0;
 
       if (dri2_surf->dri_image_front) {
@@ -597,7 +609,7 @@ droid_image_get_buffers(struct dri_drawable *driDrawable, unsigned int format,
    }
 
    if (buffer_mask & __DRI_IMAGE_BUFFER_BACK) {
-      if (get_back_bo(dri2_surf) < 0)
+      if (!dri2_dpy->kopper && get_back_bo(dri2_surf) < 0)
          return 0;
 
       if (dri2_surf->dri_image_back) {
@@ -1106,10 +1118,19 @@ kopperSetSurfaceCreateInfo(void *_draw, struct kopper_loader_info *out)
    out->present_opaque = true;
 }
 
+static void
+kopperGetDrawableInfo(struct dri_drawable *draw, int *w, int *h, void *loaderPrivate)
+{
+   struct dri2_egl_surface *dri2_surf = loaderPrivate;
+
+   droid_get_window_size(dri2_surf, w, h);
+}
+
 static const __DRIkopperLoaderExtension kopper_loader_extension = {
    .base = {__DRI_KOPPER_LOADER, 1},
 
    .SetSurfaceCreateInfo = kopperSetSurfaceCreateInfo,
+   .GetDrawableInfo = kopperGetDrawableInfo,
 };
 
 static const __DRIextension *droid_kopper_image_loader_extensions[] = {
@@ -1290,37 +1311,46 @@ dri2_initialize_android(_EGLDisplay *disp)
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    const char *err;
 
-   dri2_dpy->gralloc = u_gralloc_create(U_GRALLOC_TYPE_AUTO);
-   if (dri2_dpy->gralloc == NULL) {
-      err = "DRI2: failed to get gralloc";
-      goto cleanup;
-   }
+    if (disp->Options.Zink) {
+        dri2_dpy->driver_name = strdup("zink");
+        dri2_dpy->loader_extensions = droid_kopper_image_loader_extensions;
+        dri2_dpy->fd_render_gpu = -1;
+        dri2_dpy->pure_swrast = true;
+        dri2_detect_swrast_kopper(disp);
+        if (!dri2_create_screen(disp)) {
+            err = "DRI2: Failed to create swrast screen";
+            goto cleanup;
+        }
 
-   bool force_pure_swrast = debug_get_bool_option("MESA_ANDROID_NO_KMS_SWRAST", false);
+        device_opened = EGL_TRUE;
+    } else {
+        dri2_dpy->gralloc = u_gralloc_create(U_GRALLOC_TYPE_AUTO);
+        if (dri2_dpy->gralloc == NULL) {
+            err = "DRI2: failed to get gralloc";
+            goto cleanup;
+        }
 
-   if (!force_pure_swrast)
-      device_opened = droid_open_device(disp, disp->Options.ForceSoftware);
+        bool force_pure_swrast = debug_get_bool_option("MESA_ANDROID_NO_KMS_SWRAST", false);
 
-   if ((!device_opened && disp->Options.ForceSoftware) ||
-       force_pure_swrast) {
-      if (disp->Options.Zink) {
-         dri2_dpy->driver_name = strdup("zink");
-         dri2_dpy->loader_extensions = droid_kopper_image_loader_extensions;
-      } else {
-         dri2_dpy->driver_name = strdup("swrast");
-         dri2_dpy->loader_extensions = droid_swrast_image_loader_extensions;
-      }
-      dri2_dpy->fd_render_gpu = -1;
-      dri2_dpy->pure_swrast = true;
-      dri2_detect_swrast_kopper(disp);
+        if (!force_pure_swrast)
+            device_opened = droid_open_device(disp, disp->Options.ForceSoftware);
 
-      if (!dri2_create_screen(disp)) {
-         err = "DRI2: Failed to create swrast screen";
-         goto cleanup;
-      }
+        if ((!device_opened && disp->Options.ForceSoftware) ||
+            force_pure_swrast) {
+            dri2_dpy->driver_name = strdup("swrast");
+            dri2_dpy->loader_extensions = droid_swrast_image_loader_extensions;
+            dri2_dpy->fd_render_gpu = -1;
+            dri2_dpy->pure_swrast = true;
+            dri2_detect_swrast_kopper(disp);
 
-      device_opened = EGL_TRUE;
-   }
+            if (!dri2_create_screen(disp)) {
+                err = "DRI2: Failed to create swrast screen";
+                goto cleanup;
+            }
+
+            device_opened = EGL_TRUE;
+        }
+    }
 
    if (!device_opened) {
       err = "DRI2: failed to open device";
