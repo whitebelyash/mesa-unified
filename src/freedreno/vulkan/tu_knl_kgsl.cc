@@ -1655,8 +1655,11 @@ vk_kgsl_binary_export_sync_file(struct vk_device *_device,
    struct vk_kgsl_binary *binary = container_of(sync, struct vk_kgsl_binary, vk);
 
    if (binary->type == VK_KGSL_SYNC_TYPE_FENCE) {
-      assert(!"what do");
-      return VK_ERROR_UNKNOWN;
+      if (binary->sync_file.fd >= 0)
+         *pFd = os_dupfd_cloexec(binary->sync_file.fd);
+      else
+         *pFd = -1;
+      return VK_SUCCESS;
    }
 
    struct kgsl_timeline_fence_get req = {
