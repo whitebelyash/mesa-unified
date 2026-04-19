@@ -1376,7 +1376,7 @@ tu_get_properties(struct tu_physical_device *pdevice,
 
    char devname[128];
    strcpy(devname, pdevice->name);
-   strcat(devname, MESA_GIT_SHA1 "/" TUGEN8_DRV_VERSION);
+   strcat(devname, " (" TUGEN8_DRV_VERSION ")");
    strcpy(props->deviceName, devname);
    memcpy(props->pipelineCacheUUID, pdevice->cache_uuid, VK_UUID_SIZE);
 
