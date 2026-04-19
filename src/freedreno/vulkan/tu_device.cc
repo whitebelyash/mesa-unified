@@ -980,7 +980,7 @@ tu_get_physical_device_properties_1_2(struct tu_physical_device *pdevice,
    p->driverID = VK_DRIVER_ID_MESA_TURNIP;
    memset(p->driverName, 0, sizeof(p->driverName));
    snprintf(p->driverName, VK_MAX_DRIVER_NAME_SIZE,
-            "turnip Mesa driver");
+            "turnip Mesa driver (whitebelyash branch)");
    memset(p->driverInfo, 0, sizeof(p->driverInfo));
    snprintf(p->driverInfo, VK_MAX_DRIVER_INFO_SIZE,
             "Mesa " PACKAGE_VERSION MESA_GIT_SHA1);
