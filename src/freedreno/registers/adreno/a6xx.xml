@@ -3285,7 +3285,26 @@ by a particular renderpass/blit.
 	<reg32 offset="0x9803" name="PC_RESTART_INDEX" low="0" high="31" type="uint" variants="A6XX-A7XX" usage="draw"/>
 	<reg32 offset="0x9b15" name="PC_RESTART_INDEX" low="0" high="31" type="uint" variants="A8XX-" usage="draw"/>
 
-	<reg32 offset="0x9804" name="PC_MODE_CNTL" low="0" high="7" variants="A6XX-A7XX" usage="draw"/>
+	<reg32 offset="0x9804" name="PC_MODE_CNTL" low="0" high="7" variants="A6XX-A7XX" usage="draw">
+		<!-- 
+		    The higher this is set, the faster primitive processing performance
+			ends up being. It is likely the amount of entries to process/fetch.
+		-->
+		<bitfield name="COUNT1" low="0" high="4" type="uint"/>
+		<!--
+		    Setting this slows down primitive processing substantially, but it
+		    was noted to fix some vertex corruption issues in the past. Likely
+			serves as a workaround to serialize the primitive pipeline?
+		-->
+		<bitfield name="UNK5" pos="5" type="boolean"/>
+		<!-- Never set by the blob. Unclear impact. -->
+		<bitfield name="UNK6" pos="6" type="boolean" variants="A7XX-"/>
+		<!--
+		    Similar to COUNT1 but with a lower impact on performance, still it
+		    seems to be better the higher this is set.
+		-->
+		<bitfield name="COUNT2" low="8" high="13" type="uint" variants="A7XX-"/>
+	</reg32>
 	<reg32 offset="0x9b00" name="PC_MODE_CNTL" low="0" high="14" variants="A8XX" usage="draw"/>
 
 	<reg32 offset="0x9805" name="PC_POWER_CNTL" low="0" high="2" variants="A6XX" usage="draw"/>
