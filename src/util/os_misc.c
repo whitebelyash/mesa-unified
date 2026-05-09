@@ -196,7 +196,7 @@ os_get_android_option(const char *name)
    for (int i = 0; i < ARRAY_SIZE(prefices); i++) {
       strlcpy(full_key, prefices[i], PROPERTY_KEY_MAX);
       strlcat(full_key, key, PROPERTY_KEY_MAX);
-      len = property_get(full_key, os_android_option_value, NULL);
+      len = /*property_get(full_key, os_android_option_value, NULL)*/0;
       if (len > 0)
          return os_android_option_value;
    }
