@@ -2792,6 +2792,9 @@ eglGetProcAddress(const char *procname)
    RETURN_EGL_SUCCESS(NULL, ret);
 }
 
+// HACK for LWJGL: alias glXGetProcAddress for symbol loading
+PUBLIC __eglMustCastToProperFunctionPointerType EGLAPIENTRY glXGetProcAddress(const char* procname) __attribute__((alias("eglGetProcAddress")));
+
 static int
 _eglLockDisplayInterop(EGLDisplay dpy, EGLContext context, _EGLDisplay **disp,
                        _EGLContext **ctx)
