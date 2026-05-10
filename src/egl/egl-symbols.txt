@@ -45,3 +45,4 @@ eglWaitSync
 MesaGLInteropEGLQueryDeviceInfo
 MesaGLInteropEGLExportObject
 MesaGLInteropEGLFlushObjects
+glXGetProcAddress
