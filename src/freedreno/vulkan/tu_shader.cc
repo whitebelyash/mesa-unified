@@ -2067,21 +2067,38 @@ tu6_emit_fs_inputs(struct tu_cs *cs, const struct ir3_shader_variant *fs)
    for (unsigned i = 0; i < ARRAY_SIZE(ij_regid); i++)
       ij_regid[i] = ir3_find_sysval_regid(fs, SYSTEM_VALUE_BARYCENTRIC_PERSP_PIXEL + i);
 
-   if (fs->num_sampler_prefetch > 0) {
+   uint32_t prefetch_count = fs->num_sampler_prefetch;
+
+   if (CHIP >= A8XX) {
+      const uint64_t chip_id = cs->device->physical_device->dev_id.chip_id;
+
+      /* A8xx Vulkan prefetch tuning:
+       * - A810: small TMU/bandwidth budget, keep prefetch conservative
+       * - A825/A829: mid-tier TMU setup, allow moderate prefetch depth
+       * - A830/A840: larger TMU/cache budget, keep full prefetch depth
+       */
+      if (chip_id == 0xffff44010000ull)                /* Adreno 810 */
+         prefetch_count = MIN2(prefetch_count, 2u);
+      else if (chip_id == 0x44030000ull ||             /* Adreno 825 */
+               chip_id == 0x44030a20ull)               /* Adreno 829 */
+         prefetch_count = MIN2(prefetch_count, 4u);
+   }
+
+   if (prefetch_count > 0) {
       /* FS prefetch reads coordinates from r0.x */
       assert(!VALIDREG(ij_regid[fs->prefetch_bary_type]) ||
              ij_regid[fs->prefetch_bary_type] == regid(0, 0));
    }
 
-   tu_cs_emit_pkt4(cs, REG_A6XX_SP_PS_INITIAL_TEX_LOAD_CNTL, 1 + fs->num_sampler_prefetch);
-   tu_cs_emit(cs, A6XX_SP_PS_INITIAL_TEX_LOAD_CNTL_COUNT(fs->num_sampler_prefetch) |
+   tu_cs_emit_pkt4(cs, REG_A6XX_SP_PS_INITIAL_TEX_LOAD_CNTL, 1 + prefetch_count);
+   tu_cs_emit(cs, A6XX_SP_PS_INITIAL_TEX_LOAD_CNTL_COUNT(prefetch_count) |
                      COND(CHIP >= A7XX, A6XX_SP_PS_INITIAL_TEX_LOAD_CNTL_CONSTSLOTID(0x1ff)) |
                      COND(CHIP >= A7XX, A6XX_SP_PS_INITIAL_TEX_LOAD_CNTL_CONSTSLOTID4COORD(0x1ff)) |
                      COND(!VALIDREG(ij_regid[IJ_PERSP_PIXEL]),
                           A6XX_SP_PS_INITIAL_TEX_LOAD_CNTL_IJ_WRITE_DISABLE) |
                      COND(fs->prefetch_end_of_quad,
                           A6XX_SP_PS_INITIAL_TEX_LOAD_CNTL_ENDOFQUAD));
-   for (int i = 0; i < fs->num_sampler_prefetch; i++) {
+   for (uint32_t i = 0; i < prefetch_count; i++) {
       const struct ir3_sampler_prefetch *prefetch = &fs->sampler_prefetch[i];
       tu_cs_emit(
          cs, SP_PS_INITIAL_TEX_LOAD_CMD(
@@ -2092,9 +2109,9 @@ tu6_emit_fs_inputs(struct tu_cs *cs, const struct ir3_shader_variant *fs)
                 .cmd = tu6_tex_opc_to_prefetch_cmd(prefetch->tex_opc), ).value);
    }
 
-   if (fs->num_sampler_prefetch > 0) {
-      tu_cs_emit_pkt4(cs, REG_A6XX_SP_PS_INITIAL_TEX_INDEX_CMD(0), fs->num_sampler_prefetch);
-      for (int i = 0; i < fs->num_sampler_prefetch; i++) {
+   if (prefetch_count > 0) {
+      tu_cs_emit_pkt4(cs, REG_A6XX_SP_PS_INITIAL_TEX_INDEX_CMD(0), prefetch_count);
+      for (uint32_t i = 0; i < prefetch_count; i++) {
          const struct ir3_sampler_prefetch *prefetch = &fs->sampler_prefetch[i];
          tu_cs_emit(cs,
                     A6XX_SP_PS_INITIAL_TEX_INDEX_CMD_SAMP_ID(prefetch->samp_bindless_id) |
