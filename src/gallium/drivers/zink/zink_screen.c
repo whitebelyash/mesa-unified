@@ -3421,8 +3421,15 @@ zink_internal_create_screen(const struct pipe_screen_config *config, int64_t dev
 
 
    u_trace_state_init();
-
-   screen->loader_lib = util_dl_open(VK_LIBNAME);
+   
+   // Force loading already existing handle
+   screen->loader_lib = dlopen("libmjlvlk.so", RTLD_NOLOAD | RTLD_NOW);
+   if(screen->loader_lib) {
+      fprintf(stderr, "ZINK: acquired vulkan handle %p\n", screen->loader_lib);
+   }
+   if(!screen->loader_lib) {
+      screen->loader_lib = util_dl_open(VK_LIBNAME);
+   }
    if (!screen->loader_lib) {
       if (!screen->driver_name_is_inferred)
          mesa_loge("ZINK: failed to load "VK_LIBNAME);
