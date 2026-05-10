@@ -175,40 +175,10 @@ ir3_context_init(struct ir3_compiler *compiler, struct ir3_shader *shader,
          }
       }
 
-      const uint32_t chip_id = compiler->dev_id->chip_id;
-
-      /* A8xx tuning: scale prefetch aggressiveness with TMU/cache/bandwidth.
-       * - A810: bandwidth-limited (LPDDR4X/5), keep conservative prefetch.
-       * - A825/A829: 64 TMUs + LPDDR5X, allow more overlap.
-       * - A830/A840: 96 TMUs + larger caches, allow most aggressive prefetch.
-       */
-      unsigned small_limit = 2;
-      unsigned medium_limit = 3;
-
-      switch (chip_id) {
-      case 0x44010000: /* Adreno 810 */
-         small_limit = 2;
-         medium_limit = 3;
-         break;
-      case 0x44030000: /* Adreno 825 */
-      case 0x44030A20: /* Adreno 829 */
-         small_limit = 3;
-         medium_limit = 4;
-         break;
-      case 0x44050001: /* Adreno 830 */
-      case 0x43050A31: /* Adreno 830 variant */
-      case 0x43050A32: /* Adreno 840 */
-         small_limit = 4;
-         medium_limit = 5;
-         break;
-      default:
-         break;
-      }
-
       if (instruction_count < 50) {
-         ctx->prefetch_limit = small_limit;
+         ctx->prefetch_limit = 2;
       } else if (instruction_count < 70) {
-         ctx->prefetch_limit = medium_limit;
+         ctx->prefetch_limit = 3;
       } else {
          ctx->prefetch_limit = IR3_MAX_SAMPLER_PREFETCH;
       }
