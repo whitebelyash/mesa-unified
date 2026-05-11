@@ -353,6 +353,10 @@ with_vdrm = [
   with_intel_virtio,
 ].contains(true)
 
+if freedreno_kmds.contains('kgsl')
+  pre_args += '-DHAVE_FREEDRENO_KGSL'
+endif
+
 with_dri = false
 if with_gallium and (system_has_kms_drm or (freedreno_kmds.contains('kgsl') and with_gallium_zink))
   _glx = get_option('glx')

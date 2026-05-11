@@ -294,7 +294,7 @@ bool
 loader_is_device_render_capable(int fd)
 {
    drmDevicePtr dev_ptr;
-   bool ret;
+   bool ret = 1; // FIXME: detect KGSL device
 
    if (drmGetDevice2(fd, 0, &dev_ptr) != 0)
       return false;

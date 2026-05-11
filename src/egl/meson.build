@@ -136,6 +136,7 @@ if with_dri
   if with_platform_android
     deps_for_egl += [dep_android, idep_u_gralloc]
     files_egl += files('drivers/dri2/platform_android.c')
+    files_egl += files('drivers/dri2/platform_android_airgap.c')
   endif
 elif with_platform_haiku
   c_args_for_egl += [
@@ -215,8 +216,6 @@ libegl = shared_library(
   link_depends : [link_deps_for_egl],
   dependencies : [deps_for_egl, dep_dl, dep_libdrm, dep_clock, dep_thread, idep_mesautil],
   install : true,
-  version : egl_lib_version,
-  soversion : egl_lib_soversion,
   name_prefix : host_machine.system() == 'windows' ? 'lib' : [],  # always use lib, but avoid warnings on !windows
   vs_module_defs : egl_def
 )

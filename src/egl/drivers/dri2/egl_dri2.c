@@ -833,6 +833,7 @@ dri2_setup_device(_EGLDisplay *disp, EGLBoolean software)
 
    dev = _eglFindDevice(render_fd, software);
 
+
    if (render_fd >= 0 && render_fd != dri2_dpy->fd_render_gpu)
       close(render_fd);
 
