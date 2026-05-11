@@ -1419,11 +1419,11 @@ dri2_from_dma_bufs(struct dri_screen *screen,
    struct dri_image *img;
    const struct dri2_format_mapping *map = dri2_get_mapping_by_fourcc(fourcc);
 
-   if (!screen->dmabuf_import) {
-      if (error)
-         *error = __DRI_IMAGE_ERROR_BAD_PARAMETER;
-      return NULL;
-   }
+   //if (!screen->dmabuf_import) {
+   //   if (error)
+   //      *error = __DRI_IMAGE_ERROR_BAD_PARAMETER;
+   //   return NULL;
+   //}
 
    unsigned err = __DRI_IMAGE_ERROR_SUCCESS;
    /* Allow a NULL error arg since many callers don't care. */

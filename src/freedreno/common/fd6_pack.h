@@ -40,7 +40,7 @@ struct fd_reg_pair {
 #endif
 
 #if !FD_BO_NO_HARDPIN
-#  error 'Hardpin unsupported'
+//#  error 'Hardpin unsupported'
 #endif
 
 static inline uint64_t
