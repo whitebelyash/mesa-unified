@@ -508,22 +508,22 @@ fd_init_screen_caps(struct fd_screen *screen)
    if (is_a6xx(screen)) {
       if (screen->info->props.is_a702) {
          /* a702 family is a special case, no gs/tess: */
-         caps->glsl_feature_level = 330;
-         caps->essl_feature_level = 320;
+         caps->glsl_feature_level = 140;
+         caps->essl_feature_level = 310;
       } else {
          /* a6xx+*/
          caps->glsl_feature_level = 460;
          caps->essl_feature_level = 320;
       }
    } else if (is_a5xx(screen) || is_a4xx(screen)) {
-      caps->glsl_feature_level = 330;
+      caps->glsl_feature_level = 140;
       caps->essl_feature_level = 320;
    } else if (is_a3xx(screen)) {
-      caps->glsl_feature_level = 330;
+      caps->glsl_feature_level = 140;
       caps->essl_feature_level = 300;
    } else { /* a2xx */
-      caps->glsl_feature_level = 330;
-      caps->essl_feature_level = 300;
+      caps->glsl_feature_level = 120;
+      caps->essl_feature_level = 100;
    }
 
    caps->glsl_feature_level_compatibility = caps->glsl_feature_level;
