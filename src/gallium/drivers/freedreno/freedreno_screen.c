@@ -100,7 +100,7 @@ fd_screen_get_name(struct pipe_screen *pscreen)
 static const char *
 fd_screen_get_vendor(struct pipe_screen *pscreen)
 {
-   return "freedreno";
+   return "freedreno/MojoLauncher";
 }
 
 static const char *
