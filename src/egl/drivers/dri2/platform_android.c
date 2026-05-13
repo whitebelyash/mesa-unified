@@ -457,17 +457,19 @@ droid_swap_interval(_EGLDisplay *disp, _EGLSurface *surf, EGLint interval)
 }
 
 static void
-droid_get_window_size(struct dri2_egl_surface *dri2_surf, int *w, int *h) {
+update_buffer_size(struct dri2_egl_surface *dri2_surf)
+{
+   if(dri2_surf->base.Type == EGL_PBUFFER_BIT) return; // pbuffer sizes are always up to date
    struct ANativeWindow* window = dri2_surf->window;
-
-   *w = ANativeWindow_getWidth(window);
-   *h = ANativeWindow_getHeight(window);
+   dri2_surf->base.Width = ANativeWindow_getWidth(window);
+   dri2_surf->base.Height = ANativeWindow_getHeight(window);
 }
 
 static void
-update_buffer_size(struct dri2_egl_surface *dri2_surf)
-{
-   droid_get_window_size(dri2_surf, &dri2_surf->base.Width, &dri2_surf->base.Height);
+droid_get_window_size(struct dri2_egl_surface *dri2_surf, int *w, int *h) {
+   update_buffer_size(dri2_surf);
+   *w = dri2_surf->base.Width;
+   *h = dri2_surf->base.Height;
 }
 
 static int
@@ -486,7 +488,12 @@ update_buffers(struct dri2_egl_surface *dri2_surf)
       return -1;
    }
 
-   update_buffer_size(dri2_surf);
+   /* free outdated buffers and update the surface size */
+   if (dri2_surf->base.Width != dri2_surf->buffer->width ||
+       dri2_surf->base.Height != dri2_surf->buffer->height) {
+      dri2_surf->base.Width = dri2_surf->buffer->width;
+      dri2_surf->base.Height = dri2_surf->buffer->height;
+   }
 
    return 0;
 }
@@ -1045,8 +1052,6 @@ droid_swrast_get_drawable_info(struct dri_drawable *drawable,
    struct dri2_egl_surface *dri2_surf = loaderPrivate;
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(dri2_surf->base.Resource.Display);
 
-_eglLog(_EGL_WARNING, "droid_swrast_get_drawable_info: dri2_dpy %p", dri2_dpy);
-_eglLog(_EGL_WARNING, "droid_swrast_get_drawable_info: kopper %d", dri2_dpy->kopper);
    if (dri2_dpy->kopper)
       update_buffer_size(dri2_surf);
    else
