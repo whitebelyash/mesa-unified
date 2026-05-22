@@ -161,7 +161,7 @@ static VkInstance instance;
 static const char *
 zink_get_vendor(struct pipe_screen *pscreen)
 {
-   return "Mesa";
+   return "zink/MojoLauncher";
 }
 
 static const char *
@@ -178,6 +178,16 @@ zink_get_screen_fd(struct pipe_screen *pscreen)
    return screen->drm_fd;
 }
 
+static inline void
+zink_get_driver_version(uint32_t packed, uint32_t* version)
+{
+   version[0] = VK_API_VERSION_VARIANT(packed);
+   version[1] = VK_API_VERSION_MAJOR(packed);
+   version[2] = VK_API_VERSION_MINOR(packed);
+   version[3] = VK_API_VERSION_PATCH(packed);
+}
+
+
 static const char *
 zink_get_name(struct pipe_screen *pscreen)
 {
@@ -188,12 +198,16 @@ static int
 zink_set_driver_strings(struct zink_screen *screen)
 {
    char buf[1000];
+   uint32_t version[4];
+   zink_get_driver_version(screen->info.props.driverVersion, version);
    const char *driver_name = vk_DriverId_to_str(zink_driverid(screen)) + strlen("VK_DRIVER_ID_");
-   int written = snprintf(buf, sizeof(buf), "zink Vulkan %d.%d(%s (%s))",
+   int written = snprintf(buf, sizeof(buf), "%s (Vulkan %d.%d.%d, %s, %d.%d.%d)",
+      screen->info.props.deviceName,
       VK_VERSION_MAJOR(screen->info.device_version),
       VK_VERSION_MINOR(screen->info.device_version),
-      screen->info.props.deviceName,
-      strstr(vk_DriverId_to_str(zink_driverid(screen)), "VK_DRIVER_ID_") ? driver_name : "Driver Unknown"
+      VK_VERSION_PATCH(screen->info.device_version),
+      strstr(vk_DriverId_to_str(zink_driverid(screen)), "VK_DRIVER_ID_") ? driver_name : "Driver Unknown",
+      version[1], version[2], version[3]
    );
    if (written < 0)
       return written;
