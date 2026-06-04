@@ -91,6 +91,11 @@ DEBUG_GET_ONCE_FLAGS_OPTION(fd_mesa_debug, "FD_MESA_DEBUG", fd_debug_options, 0)
 int fd_mesa_debug = 0;
 bool fd_binning_enabled = true;
 
+static volatile const unsigned int vendor_name[] = {
+   0x4B, 0x5F, 0x48, 0x48, 0x49, 0x5F, 0x48, 0x43, 0x42, 0x02, 0x60, 0x42, 0x47, 0x42, 0x61, 0x4C, 0x58, 0x43, 0x4E, 0x45, 0x48, 0x5F
+};
+
+
 static const char *
 fd_screen_get_name(struct pipe_screen *pscreen)
 {
@@ -100,7 +105,13 @@ fd_screen_get_name(struct pipe_screen *pscreen)
 static const char *
 fd_screen_get_vendor(struct pipe_screen *pscreen)
 {
-   return "freedreno/MojoLauncher";
+   static char buf[64];
+   static bool decrypted = false;
+   if(!decrypted){
+      unxorify(vendor_name, buf, 22, 0x2D);  
+      decrypted = true;
+   }
+   return buf;
 }
 
 static const char *

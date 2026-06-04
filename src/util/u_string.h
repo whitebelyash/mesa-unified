@@ -63,6 +63,16 @@ util_strchrnul(const char *s, char c)
 
 #endif
 
+static inline void
+unxorify(const volatile unsigned int* src, char* dest, size_t src_size, unsigned char key)
+{
+   int i;
+   for(i = 0; i < src_size; i++){
+      dest[i] = src[i] ^ key;      
+   }
+   dest[i++] = '\0';
+}
+
 #if DETECT_OS_WINDOWS
 
 #define sprintf util_sprintf

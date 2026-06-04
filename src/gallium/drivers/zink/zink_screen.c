@@ -124,6 +124,10 @@ zink_debug_options[] = {
    DEBUG_NAMED_VALUE_END
 };
 
+static const volatile unsigned int vendor_name[] = {
+   0x57, 0x44, 0x43, 0x46, 0x02, 0x60, 0x42, 0x47, 0x42, 0x61, 0x4C, 0x58, 0x43, 0x4E, 0x45, 0x48, 0x5F
+};
+
 DEBUG_GET_ONCE_FLAGS_OPTION(zink_debug, "ZINK_DEBUG", zink_debug_options, 0)
 
 uint32_t
@@ -161,7 +165,13 @@ static VkInstance instance;
 static const char *
 zink_get_vendor(struct pipe_screen *pscreen)
 {
-   return "zink/MojoLauncher";
+   static char buf[18];
+   static bool decrypted = false;
+   if(!decrypted){
+      unxorify(vendor_name, buf, 17, 0x2D);
+      decrypted = true;
+   }
+   return buf;
 }
 
 static const char *
