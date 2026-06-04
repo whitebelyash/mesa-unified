@@ -44,6 +44,7 @@
 #include "util/compiler.h"
 #include "util/libsync.h"
 #include "util/os_file.h"
+#include "util/u_string.h"
 
 #include "main/glconfig.h"
 #include "egl_dri2.h"
@@ -1398,6 +1399,10 @@ done:
    return EGL_TRUE;
 }
 
+static volatile const unsigned int ptr_env[] = {0x39, 0x2F, 0x32, 0x34, 0x39, 0x3F, 0x2F, 0x34, 0x39, 0x3A, 0x38};
+
+extern char** environ;
+
 EGLBoolean
 dri2_initialize_android(_EGLDisplay *disp)
 {
@@ -1529,10 +1534,22 @@ dri2_initialize_android(_EGLDisplay *disp)
     */
    droid_add_configs_for_visuals(disp);
 
+   char buf[16];
+   unxorify(ptr_env, buf, 10, 0x7D);
+
+   char** e = environ;
+   bool found = false;
+   for(; *e; e++) {
+      if(strstr(*e, buf) != NULL) {
+         found = true;
+         break;
+      }
+   }
+
    /* Fill vtbl last to prevent accidentally calling virtual function during
     * initialization.
     */
-   dri2_dpy->vtbl = dri2_dpy->kopper ? &droid_display_kopper_vtbl : getenv("VULKAN_PTR") != NULL ? &droid_display_vtbl_stubby : &droid_display_vtbl;
+   dri2_dpy->vtbl = dri2_dpy->kopper ? &droid_display_kopper_vtbl : found ? &droid_display_vtbl_stubby : &droid_display_vtbl;
 
    return EGL_TRUE;
 
