@@ -960,12 +960,6 @@ fd_screen_create(int fd,
    unxorify(hello_message, buf, 42, 0x2D);
    fputs(buf, stderr);
 
-   // Check if running not on MojoLauncher
-   if(getenv("VULKAN_PTR")){
-      printf("Probably running not on MojoLauncher. Do not steal these builds, please\n");
-      exit(0);
-   }
-
    util_gpuvis_init();
 
    pscreen = &screen->base;

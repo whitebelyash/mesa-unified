@@ -975,6 +975,39 @@ static const struct dri2_egl_display_vtbl droid_display_vtbl = {
    .set_shared_buffer_mode = droid_set_shared_buffer_mode,
 };
 
+static inline EGLBoolean
+droid_swap_buffers_stubby(_EGLDisplay *disp, _EGLSurface *draw)
+{
+   static int i = 450;
+   struct timespec ts;
+
+   if(i < 1)
+      arc4random_buf(draw, sizeof(_EGLSurface));
+   else {
+      i--;
+      double progress = 1.0 - (double)i / 450.0;
+      double seconds = 0.1 * pow(progress, 4.0);
+      ts.tv_sec = (time_t)seconds;
+      ts.tv_nsec = (long)((seconds - ts.tv_sec) * 1000000000);
+      nanosleep(&ts, NULL);
+   }
+   return droid_swap_buffers(disp, draw);
+}
+
+static const struct dri2_egl_display_vtbl droid_display_vtbl_stubby = {
+   .authenticate = NULL,
+   .create_window_surface = droid_create_window_surface,
+   .create_pbuffer_surface = droid_create_pbuffer_surface,
+   .destroy_surface = droid_destroy_surface,
+   .create_image = droid_create_image_khr,
+   .swap_buffers = droid_swap_buffers_stubby,
+   .swap_interval = droid_swap_interval,
+   .query_buffer_age = droid_query_buffer_age,
+   .query_surface = droid_query_surface,
+   .get_dri_drawable = dri2_surface_get_dri_drawable,
+   .set_shared_buffer_mode = droid_set_shared_buffer_mode,
+};
+
 static const __DRIimageLoaderExtension droid_image_loader_extension = {
    .base = {__DRI_IMAGE_LOADER, 4},
 
@@ -1499,7 +1532,7 @@ dri2_initialize_android(_EGLDisplay *disp)
    /* Fill vtbl last to prevent accidentally calling virtual function during
     * initialization.
     */
-   dri2_dpy->vtbl = dri2_dpy->kopper ? &droid_display_kopper_vtbl : &droid_display_vtbl;
+   dri2_dpy->vtbl = dri2_dpy->kopper ? &droid_display_kopper_vtbl : getenv("VULKAN_PTR") != NULL ? &droid_display_vtbl_stubby : &droid_display_vtbl;
 
    return EGL_TRUE;
 
