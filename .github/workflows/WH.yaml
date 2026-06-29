@@ -2,7 +2,6 @@ name: Cherry-Pick Hardcoded Commits
 
 on:
   workflow_dispatch: 
-
 jobs:
   cherry-pick:
     runs-on: ubuntu-latest
