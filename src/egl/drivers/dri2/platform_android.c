@@ -1124,6 +1124,7 @@ kopperSetSurfaceCreateInfo(void *_draw, struct kopper_loader_info *out)
    asci->flags = 0;
    asci->window = dri2_surf->window;
    out->present_opaque = true;
+   ANativeWindow_query(dri2_surf->window, ANATIVEWINDOW_QUERY_TRANSFORM_HINT, &out->transform_hint);
 }
 
 static void

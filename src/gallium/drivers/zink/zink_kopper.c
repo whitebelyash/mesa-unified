@@ -30,6 +30,10 @@
 #include "zink_resource.h"
 #include "zink_kopper.h"
 
+#ifdef DETECT_OS_ANDROID
+#include <system/window.h>
+#endif
+
 static void
 zink_kopper_set_present_mode_for_interval(struct kopper_displaytarget *cdt, int interval)
 {
@@ -279,6 +283,20 @@ zink_kopper_deinit_displaytarget(struct zink_screen *screen, struct kopper_displ
    cdt->surface = VK_NULL_HANDLE;
 }
 
+/* Get rotation flag from ANW hint */
+// TODO: move somewhere else
+#ifdef DETECT_OS_ANDROID
+static VkSurfaceTransformFlagBitsKHR util_RotationToTransform(uint32_t hint){
+      if(hint == NATIVE_WINDOW_TRANSFORM_ROT_90)
+         return VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR;
+      if(hint == NATIVE_WINDOW_TRANSFORM_ROT_180)
+         return VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR;
+      if(hint == NATIVE_WINDOW_TRANSFORM_ROT_270)
+         return VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR;
+      return VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+}
+#endif
+
 static struct kopper_swapchain *
 kopper_CreateSwapchain(struct zink_screen *screen, struct kopper_displaytarget *cdt, unsigned w, unsigned h, VkResult *result)
 {
@@ -325,6 +343,16 @@ kopper_CreateSwapchain(struct zink_screen *screen, struct kopper_displaytarget *
    cswap->scci.presentMode = cdt->present_mode;
    cswap->scci.minImageCount = cdt->caps.minImageCount;
    cswap->scci.preTransform = cdt->caps.currentTransform;
+   #ifdef DETECT_OS_ANDROID
+   if(cdt->type == KOPPER_ANDROID){
+      int32_t hint = cdt->info.transform_hint;
+      VkSurfaceTransformFlagBitsKHR transform = util_RotationToTransform(hint);
+      ANativeWindow* window = ((VkAndroidSurfaceCreateInfoKHR*)&cdt->info.bos)->window;
+      native_window_set_buffers_transform(window, hint);
+      cswap->scci.preTransform = transform;
+   }
+   #endif
+
    if (cdt->formats[1])
       cswap->scci.pNext = &cdt->format_list;
 

@@ -99,6 +99,9 @@ struct kopper_loader_info {
    int initial_swap_interval;
    bool present_opaque;
    uint32_t compression;
+   #ifdef HAVE_ANDROID_PLATFORM
+   int32_t transform_hint;
+   #endif
 };
 
 #define __DRI_KOPPER_LOADER "DRI_KopperLoader"
