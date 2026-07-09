@@ -133,6 +133,7 @@ fd6_texture_barrier(struct pipe_context *pctx, unsigned flags)
    add_flushes(pctx, flushes);
 }
 
+template <chip CHIP>
 static void
 fd6_memory_barrier(struct pipe_context *pctx, unsigned flags)
    in_dt
@@ -164,8 +165,12 @@ fd6_memory_barrier(struct pipe_context *pctx, unsigned flags)
       * pending for these opcodes. This may result in a few extra WAIT_FOR_ME's
       * with these opcodes, but the alternative would add unnecessary WAIT_FOR_ME's
       * before draw opcodes that don't need it.
+      *
+      * a8xx removes this implicit wait, so CP_WAIT_FOR_ME should be emitted
+      * without delay, which also matches proprietary driver.
       */
-      if (fd_context(pctx)->screen->info->props.indirect_draw_wfm_quirk) {
+      if ((CHIP >= A8XX) ||
+          fd_context(pctx)->screen->info->props.indirect_draw_wfm_quirk) {
          flushes |= FD6_WAIT_FOR_ME;
       }
    }
@@ -177,9 +182,11 @@ fd6_memory_barrier(struct pipe_context *pctx, unsigned flags)
    add_flushes(pctx, flushes);
 }
 
+template <chip CHIP>
 void
 fd6_barrier_init(struct pipe_context *pctx)
 {
    pctx->texture_barrier = fd6_texture_barrier;
-   pctx->memory_barrier = fd6_memory_barrier;
+   pctx->memory_barrier = fd6_memory_barrier<CHIP>;
 }
+FD_GENX(fd6_barrier_init);
