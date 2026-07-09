@@ -80,6 +80,9 @@ struct fd_resource_tracking {
     * shadowed.
     */
    uint32_t bc_batch_mask;
+
+   /* Bitmask of PIPE_BARRIER_x emit since last write: */
+   uint32_t executed_barriers;
 };
 
 void __fd_resource_tracking_destroy(struct fd_resource_tracking *track);
