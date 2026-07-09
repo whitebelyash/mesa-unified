@@ -75,6 +75,9 @@ add_flushes(struct pipe_context *pctx, unsigned flushes)
 
    DBG("flushes=0x%x", flushes);
 
+   if (!flushes)
+      return;
+
    /* If there is an active compute/nondraw batch, that is the one
     * we want to add the flushes to.  Ie. last op was a launch_grid,
     * if the next one is a launch_grid then the barriers should come
