@@ -8494,12 +8494,13 @@ tu6_draw_common(struct tu_cmd_buffer *cmd,
                     ir3_tess_factor_stride(tes->variant->key.tessellation),
                  TU_TESS<CHIP>::PARAM_SIZE / (tcs->variant->output_size * 4))
             : 0;
-      /* convert from # of patches to draw count */
-      subdraw_size *= cmd->vk.dynamic_graphics_state.ts.patch_control_points;
 
       /* For gen8 tess_bo is sized for two draws, adjust subdraw size accordingly: */
       if (CHIP >= A8XX)
          subdraw_size /= 2;
+
+      /* convert from # of patches to draw count */
+      subdraw_size *= cmd->vk.dynamic_graphics_state.ts.patch_control_points;
 
       tu_cs_emit_pkt7(cs, CP_SET_SUBDRAW_SIZE, 1);
       tu_cs_emit(cs, subdraw_size);
