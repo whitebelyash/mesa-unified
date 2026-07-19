@@ -1487,8 +1487,10 @@ handle_zs_blit(struct fd_context *ctx,
          blit.mask |= PIPE_MASK_R | PIPE_MASK_G | PIPE_MASK_B;
       if (info->mask & PIPE_MASK_S)
          blit.mask |= PIPE_MASK_A;
-      blit.src.format = PIPE_FORMAT_Z24_UNORM_S8_UINT_AS_R8G8B8A8;
-      blit.dst.format = PIPE_FORMAT_Z24_UNORM_S8_UINT_AS_R8G8B8A8;
+      blit.src.format = src->layout.ubwc ?
+         PIPE_FORMAT_Z24_UNORM_S8_UINT_AS_R8G8B8A8 : PIPE_FORMAT_RGBA8888_UNORM;
+      blit.dst.format = dst->layout.ubwc ?
+         PIPE_FORMAT_Z24_UNORM_S8_UINT_AS_R8G8B8A8 : PIPE_FORMAT_RGBA8888_UNORM;
       /* non-UBWC Z24_UNORM_S8_UINT_AS_R8G8B8A8 is broken on a630, fall back to
        * 8888_unorm.
        */
@@ -1502,10 +1504,14 @@ handle_zs_blit(struct fd_context *ctx,
             if (!dst->layout.ubwc)
                blit.dst.format = PIPE_FORMAT_RGBA8888_UNORM;
          }
+         if (info->src.resource->nr_samples > 1 && blit.src.format != PIPE_FORMAT_RGBA8888_UINT)
+            blit.sample0_only = true;
+         return fd_blitter_blit(ctx, &blit);
+      } else {
+         if (info->src.resource->nr_samples > 1)
+            blit.sample0_only = true;
+         return do_rewritten_blit<CHIP>(ctx, &blit);
       }
-      if (info->src.resource->nr_samples > 1 && blit.src.format != PIPE_FORMAT_RGBA8888_UINT)
-         blit.sample0_only = true;
-      return fd_blitter_blit(ctx, &blit);
 
    default:
       return false;

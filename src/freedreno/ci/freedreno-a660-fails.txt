@@ -4,10 +4,6 @@ KHR-GL46.shader_subroutine.control_flow_and_returned_subroutine_values_used_as_s
 KHR-GLES3.framebuffer_blit.framebuffer_blit_functionality_multisampled_to_singlesampled_blit,Fail
 KHR-GL46.texture_lod_bias.texture_lod_bias_all,Fail
 
-# New failures with ES CTS 3.2.12.0
-KHR-GLES31.core.texture_stencil8.multisample,Fail
-KHR-GL46.texture_stencil8.multisample,Fail
-
 # GL tests above, Vulkan tests below
 
 # New fails in 1.4.3.3
