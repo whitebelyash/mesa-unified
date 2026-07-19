@@ -213,7 +213,6 @@ can_do_blit(const struct fd_dev_info *dev_info, const struct pipe_blit_info *inf
    assert(info->dst.box.depth >= 0);
 
    fail_if(info->dst.resource->nr_samples > 1);
-   fail_if(info->src.resource->nr_samples > 1);
 
    fail_if(info->window_rectangle_include);
 
@@ -666,7 +665,9 @@ emit_blit_src(fd_ncrb<CHIP> &ncrb, const struct pipe_blit_info *info,
       .srgb  = util_format_is_srgb(info->src.format),
       .samples = samples,
       .filter = (info->filter == PIPE_TEX_FILTER_LINEAR),
-      .samples_average = (samples > MSAA_ONE) && !info->sample0_only,
+      .samples_average = (samples > MSAA_ONE) && !info->sample0_only &&
+                         !util_format_is_pure_integer(info->src.format) &&
+                         !util_format_is_depth_or_stencil(info->src.format),
       .unk20 = true,
       .unk22 = true,
    ));
