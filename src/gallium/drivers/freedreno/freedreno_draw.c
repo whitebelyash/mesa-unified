@@ -77,13 +77,21 @@ batch_draw_tracking_for_dirty_bits(struct fd_batch *batch) assert_dt
       }
 
       if (fd_stencil_enabled(ctx)) {
-         if (fd_resource(pfb->zsbuf.texture)->valid) {
+         struct fd_resource *zbuf = fd_resource(pfb->zsbuf.texture);
+         struct fd_resource *sbuf = zbuf;
+
+         if (zbuf->stencil)
+            sbuf = zbuf->stencil;
+
+         if (sbuf->valid) {
             restore_buffers |= FD_BUFFER_STENCIL;
             /* storing packed d/s stencil also stores depth, so we need
              * the depth restored too to avoid invalidating it.
              */
-            if (pfb->zsbuf.texture->format == PIPE_FORMAT_Z24_UNORM_S8_UINT)
+            if (pfb->zsbuf.texture->format == PIPE_FORMAT_Z24_UNORM_S8_UINT) {
+               assert(zbuf == sbuf);
                restore_buffers |= FD_BUFFER_DEPTH;
+            }
          } else {
             batch->invalidated |= FD_BUFFER_STENCIL;
          }

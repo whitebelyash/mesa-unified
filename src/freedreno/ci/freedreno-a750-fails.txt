@@ -3,7 +3,6 @@ KHR-GL46.texture_stencil8.multisample,Fail
 KHR-GL46.vertex_attrib_binding.advanced-iterations,Fail
 
 KHR-GLES3.framebuffer_blit.framebuffer_blit_functionality_multisampled_to_singlesampled_blit,Fail
-KHR-GLES3.framebuffer_blit.multisampled_to_singlesampled_blit_depth_config_test,Fail
 KHR-GLES31.core.texture_stencil8.multisample,Fail
 KHR-GLES31.core.vertex_attrib_binding.advanced-iterations,Fail
 
