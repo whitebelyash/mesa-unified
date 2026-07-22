@@ -291,13 +291,19 @@ emit_blit_fini(struct fd_context *ctx, fd_cs &cs)
    fd6_set_rb_dbg_eco_mode<CHIP>(ctx, cs, false);
 }
 
+struct emit_blit_setup_params {
+   bool scissor_enable;
+   union pipe_color_union *color;
+   BITMASK_ENUM(fd_buffer_mask) buffers = FD_BUFFER_ALL;
+   enum a6xx_rotation rotate;
+   bool src_half;
+};
+
 /* nregs: 5 */
 template <chip CHIP>
 static void
 emit_blit_setup(fd_ncrb<CHIP> &ncrb, enum pipe_format pfmt,
-                bool scissor_enable, union pipe_color_union *color,
-                BITMASK_ENUM(fd_buffer_mask) buffers,
-                enum a6xx_rotation rotate, bool src_half=false)
+                struct emit_blit_setup_params p = {})
 {
    enum a6xx_format fmt = fd6_color_format(pfmt, TILE6_LINEAR);
    bool is_srgb = util_format_is_srgb(pfmt);
@@ -309,21 +315,21 @@ emit_blit_setup(fd_ncrb<CHIP> &ncrb, enum pipe_format pfmt,
    }
 
    ncrb.add(A6XX_RB_A2D_BLT_CNTL(
-      .rotate = rotate,
-      .solid_color = !!color,
+      .rotate = p.rotate,
+      .solid_color = !!p.color,
       .color_format = fmt,
-      .scissor = scissor_enable,
-      .is_src_yuv = fmt == FMT6_Z24_UNORM_S8_UINT_AS_R8G8B8A8 && !color,
+      .scissor = p.scissor_enable,
+      .is_src_yuv = fmt == FMT6_Z24_UNORM_S8_UINT_AS_R8G8B8A8 && !p.color,
       .mask = 0xf,
       .ifmt = util_format_is_srgb(pfmt) ? R2D_UNORM8_SRGB : ifmt,
    ));
 
    ncrb.add(GRAS_A2D_BLT_CNTL(CHIP,
-      .rotate = rotate,
-      .solid_color = !!color,
+      .rotate = p.rotate,
+      .solid_color = !!p.color,
       .color_format = fmt,
-      .scissor = scissor_enable,
-      .is_src_yuv = fmt == FMT6_Z24_UNORM_S8_UINT_AS_R8G8B8A8 && !color,
+      .scissor = p.scissor_enable,
+      .is_src_yuv = fmt == FMT6_Z24_UNORM_S8_UINT_AS_R8G8B8A8 && !p.color,
       .mask = 0xf,
       .ifmt = util_format_is_srgb(pfmt) ? R2D_UNORM8_SRGB : ifmt,
    ));
@@ -351,7 +357,7 @@ emit_blit_setup(fd_ncrb<CHIP> &ncrb, enum pipe_format pfmt,
     * that. It's certainly not tied to only the src format.
     */
    ncrb.add(SP_A2D_OUTPUT_INFO(CHIP,
-      .half_precision = src_half,
+      .half_precision = p.src_half,
       .ifmt_type = output_ifmt_type,
       .color_format = fmt,
       .srgb = is_srgb,
@@ -364,9 +370,12 @@ emit_blit_setup(fd_ncrb<CHIP> &ncrb, enum pipe_format pfmt,
    enum adreno_rb_blend_factor alpha_src_factor = FACTOR_ZERO;
    enum adreno_rb_blend_factor alpha_dst_factor = FACTOR_ZERO;
 
+
    /* Handle D24S8 blits where we are only updating depth or stencil: */
    if (pfmt == PIPE_FORMAT_Z24_UNORM_S8_UINT) {
-      buffers &= FD_BUFFER_DEPTH | FD_BUFFER_STENCIL;
+      BITMASK_ENUM(fd_buffer_mask) buffers =
+         p.buffers & (FD_BUFFER_DEPTH | FD_BUFFER_STENCIL);
+
       if (buffers == FD_BUFFER_DEPTH) {
          /* preserve stencil channel */
          pixel_op = PIXEL_OP_BLENDING;
@@ -460,8 +469,7 @@ emit_blit_buffer(struct fd_context *ctx, fd_cs &cs, const struct pipe_blit_info 
    dshift = dbox->x & 0x3f;
 
    with_ncrb (cs, 5)
-      emit_blit_setup<CHIP>(ncrb, PIPE_FORMAT_R8_UNORM, false, NULL,
-                            FD_BUFFER_ALL, ROTATE_0);
+      emit_blit_setup<CHIP>(ncrb, PIPE_FORMAT_R8_UNORM);
 
    for (unsigned off = 0; off < sbox->width; off += (0x4000 - 0x40)) {
       unsigned soff, doff, w, p;
@@ -524,8 +532,7 @@ clear_ubwc_setup(fd_cs &cs)
    union pipe_color_union color = {};
    fd_ncrb<CHIP> ncrb(cs, 18);
 
-   emit_blit_setup<CHIP>(ncrb, PIPE_FORMAT_R8_UNORM, false, &color,
-                         FD_BUFFER_ALL, ROTATE_0);
+   emit_blit_setup<CHIP>(ncrb, PIPE_FORMAT_R8_UNORM, {.color = &color});
 
    ncrb.add(TPL1_A2D_SRC_TEXTURE_INFO(CHIP));
    ncrb.add(TPL1_A2D_SRC_TEXTURE_SIZE(CHIP));
@@ -750,11 +757,12 @@ emit_blit_texture_setup(fd_cs &cs, const struct pipe_blit_info *info)
       ));
    }
 
-   bool src_half_precision = util_format_is_float16(info->src.format) ||
-                             (info->src.format == PIPE_FORMAT_R11G11B10_FLOAT);
-
-   emit_blit_setup<CHIP>(ncrb, info->dst.format, info->scissor_enable, NULL,
-                         FD_BUFFER_ALL, rotate, src_half_precision);
+   emit_blit_setup<CHIP>(ncrb, info->dst.format, {
+      .scissor_enable = info->scissor_enable,
+      .rotate = rotate,
+      .src_half = util_format_is_float16(info->src.format) ||
+                  (info->src.format == PIPE_FORMAT_R11G11B10_FLOAT),
+   });
 }
 
 template <chip CHIP>
@@ -865,8 +873,7 @@ clear_lrz_setup(fd_cs &cs, struct fd_resource *zsbuf, struct fd_bo *lrz, double 
    union pipe_color_union clear_color = { .f = {depth} };
 
    emit_clear_color<CHIP>(ncrb, PIPE_FORMAT_Z16_UNORM, &clear_color);
-   emit_blit_setup<CHIP>(ncrb, PIPE_FORMAT_Z16_UNORM, false, &clear_color,
-                         FD_BUFFER_ALL, ROTATE_0);
+   emit_blit_setup<CHIP>(ncrb, PIPE_FORMAT_Z16_UNORM, {.color = &clear_color});
 
    ncrb.add(A6XX_RB_A2D_DEST_BUFFER_INFO(
       .color_format = FMT6_16_UNORM,
@@ -1025,8 +1032,7 @@ fd6_clear_buffer(struct pipe_context *pctx,
 
    with_ncrb (cs, 9) {
       emit_clear_color(ncrb, dst_fmt, &color);
-      emit_blit_setup<CHIP>(ncrb, dst_fmt, false, &color,
-                            FD_BUFFER_ALL, ROTATE_0);
+      emit_blit_setup<CHIP>(ncrb, dst_fmt, {.color = &color});
    }
 
    /*
@@ -1098,7 +1104,10 @@ clear_surface_setup(fd_cs &cs, struct pipe_surface *psurf,
    union pipe_color_union clear_color = convert_color(psurf->format, color);
 
    emit_clear_color(ncrb, psurf->format, &clear_color);
-   emit_blit_setup<CHIP>(ncrb, psurf->format, false, &clear_color, buffers, ROTATE_0);
+   emit_blit_setup<CHIP>(ncrb, psurf->format, {
+      .color = &clear_color,
+      .buffers = buffers,
+   });
 }
 
 template <chip CHIP>
@@ -1237,7 +1246,10 @@ resolve_tile_setup(struct fd_batch *batch, fd_cs &cs, uint32_t base,
    /* Enable scissor bit, which will take into account the window scissor
     * which is set per-tile
     */
-   emit_blit_setup<CHIP>(ncrb, psurf->format, true, NULL, buffers, ROTATE_0);
+   emit_blit_setup<CHIP>(ncrb, psurf->format, {
+      .scissor_enable = true,
+      .buffers = buffers,
+   });
 
    /* We shouldn't be using GMEM in the layered rendering case: */
    assert(psurf->first_layer == psurf->last_layer);
