@@ -297,6 +297,7 @@ struct emit_blit_setup_params {
    BITMASK_ENUM(fd_buffer_mask) buffers = FD_BUFFER_ALL;
    enum a6xx_rotation rotate;
    bool src_half;
+   unsigned mask = 0xf;
 };
 
 /* nregs: 5 */
@@ -320,7 +321,7 @@ emit_blit_setup(fd_ncrb<CHIP> &ncrb, enum pipe_format pfmt,
       .color_format = fmt,
       .scissor = p.scissor_enable,
       .is_src_yuv = fmt == FMT6_Z24_UNORM_S8_UINT_AS_R8G8B8A8 && !p.color,
-      .mask = 0xf,
+      .mask = p.mask,
       .ifmt = util_format_is_srgb(pfmt) ? R2D_UNORM8_SRGB : ifmt,
    ));
 
@@ -330,7 +331,7 @@ emit_blit_setup(fd_ncrb<CHIP> &ncrb, enum pipe_format pfmt,
       .color_format = fmt,
       .scissor = p.scissor_enable,
       .is_src_yuv = fmt == FMT6_Z24_UNORM_S8_UINT_AS_R8G8B8A8 && !p.color,
-      .mask = 0xf,
+      .mask = p.mask,
       .ifmt = util_format_is_srgb(pfmt) ? R2D_UNORM8_SRGB : ifmt,
    ));
 
@@ -757,11 +758,17 @@ emit_blit_texture_setup(fd_cs &cs, const struct pipe_blit_info *info)
       ));
    }
 
+   STATIC_ASSERT(PIPE_MASK_R == 0x1);
+   STATIC_ASSERT(PIPE_MASK_G == 0x2);
+   STATIC_ASSERT(PIPE_MASK_B == 0x4);
+   STATIC_ASSERT(PIPE_MASK_A == 0x8);
+
    emit_blit_setup<CHIP>(ncrb, info->dst.format, {
       .scissor_enable = info->scissor_enable,
       .rotate = rotate,
       .src_half = util_format_is_float16(info->src.format) ||
                   (info->src.format == PIPE_FORMAT_R11G11B10_FLOAT),
+      .mask = info->mask,
    });
 }
 
