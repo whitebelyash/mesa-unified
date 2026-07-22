@@ -308,15 +308,25 @@ emit_blit_setup(fd_ncrb<CHIP> &ncrb, enum pipe_format pfmt,
       ifmt = R2D_UNORM8_SRGB;
    }
 
-   uint32_t blit_cntl = A6XX_RB_A2D_BLT_CNTL_MASK(0xf) |
-                        A6XX_RB_A2D_BLT_CNTL_COLOR_FORMAT(fmt) |
-                        A6XX_RB_A2D_BLT_CNTL_IFMT(ifmt) |
-                        A6XX_RB_A2D_BLT_CNTL_ROTATE(rotate) |
-                        COND(color, A6XX_RB_A2D_BLT_CNTL_SOLID_COLOR) |
-                        COND(scissor_enable, A6XX_RB_A2D_BLT_CNTL_SCISSOR);
+   ncrb.add(A6XX_RB_A2D_BLT_CNTL(
+      .rotate = rotate,
+      .solid_color = !!color,
+      .color_format = fmt,
+      .scissor = scissor_enable,
+      .is_src_yuv = fmt == FMT6_Z24_UNORM_S8_UINT_AS_R8G8B8A8 && !color,
+      .mask = 0xf,
+      .ifmt = util_format_is_srgb(pfmt) ? R2D_UNORM8_SRGB : ifmt,
+   ));
 
-   ncrb.add(A6XX_RB_A2D_BLT_CNTL(.dword = blit_cntl));
-   ncrb.add(GRAS_A2D_BLT_CNTL(CHIP, .dword = blit_cntl));
+   ncrb.add(GRAS_A2D_BLT_CNTL(CHIP,
+      .rotate = rotate,
+      .solid_color = !!color,
+      .color_format = fmt,
+      .scissor = scissor_enable,
+      .is_src_yuv = fmt == FMT6_Z24_UNORM_S8_UINT_AS_R8G8B8A8 && !color,
+      .mask = 0xf,
+      .ifmt = util_format_is_srgb(pfmt) ? R2D_UNORM8_SRGB : ifmt,
+   ));
 
    if (CHIP >= A7XX) {
       ncrb.add(TPL1_A2D_BLT_CNTL(CHIP,
