@@ -195,6 +195,7 @@ tu_emit_event_write(struct tu_cmd_buffer *cmd,
                     enum fd_gpu_event event)
 {
    struct fd_gpu_event_info event_info = fd_gpu_events<CHIP>[event];
+   assert(event_info.raw_event);
    tu_emit_raw_event_write<CHIP>(cmd, cs, event_info.raw_event,
                                  event_info.needs_seqno);
 }
