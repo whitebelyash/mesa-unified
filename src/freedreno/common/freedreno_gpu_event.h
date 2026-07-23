@@ -51,6 +51,8 @@ enum fd_gpu_event : uint32_t {
     FD_CCU_RESOLVE,
     FD_LABEL,
     FD_DUMMY_EVENT,
+    FD_SUBPASS_FENCE,
+    FD_SUBPASS_SLICE_FENCE,
 
     FD_GPU_EVENT_MAX,
 };
@@ -126,6 +128,7 @@ constexpr inline struct fd_gpu_event_info fd_gpu_events<chip_range(CHIP == A7XX)
     {CCU_RESOLVE, false},             /* FD_CCU_RESOLVE */
     {DEBUG_LABEL, false},             /* FD_LABEL */
     {DUMMY_EVENT, false},             /* FD_DUMMY_EVENT */
+    {SUBPASS_FENCE, false},           /* FD_SUBPASS_FENCE */
 };
 
 template <chip CHIP>
@@ -159,6 +162,8 @@ constexpr inline struct fd_gpu_event_info fd_gpu_events<chip_range(CHIP >= A8XX)
     {CCU_RESOLVE, false},             /* FD_CCU_RESOLVE */
     {DEBUG_LABEL, false},             /* FD_LABEL */
     {DUMMY_EVENT, false},             /* FD_DUMMY_EVENT */
+    {SUBPASS_FENCE, false},           /* FD_SUBPASS_FENCE */
+    {SUBPASS_SLICE_FENCE, false},     /* FD_SUBPASS_SLICE_FENCE */
 };
 
 #endif
