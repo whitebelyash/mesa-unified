@@ -125,7 +125,6 @@ tu_device_get_cache_uuid(struct tu_physical_device *device, void *uuid)
       return -1;
 
    _mesa_blake3_update(&ctx, &chip_id, sizeof(chip_id));
-   _mesa_blake3_update(&ctx, &driver_flags, sizeof(driver_flags));
    _mesa_blake3_update(&ctx, &device->uche_trap_base, sizeof(device->uche_trap_base));
    _mesa_blake3_update(&ctx, &device->compiler_options,
                        sizeof(device->compiler_options));
