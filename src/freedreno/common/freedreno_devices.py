@@ -1008,13 +1008,19 @@ a740_raw_magic_regs = [
 # Adreno 710/720 are not supported by the upstream, but some hacks float on the internet adding their support.
 # These hacks simply reuse A730 entry with different ids and looks like it works in some extent
 # Let's do the same in our patchset
+
+a7xx_gen1_untested = GPUProps(
+    disable_gmem = True,
+)
+
+# GMEM is completely borked on these
 add_gpus([
-        GPUId(chip_id=0x07010000, name="FD710"), # KGSL, no speedbin data
-        GPUId(chip_id=0xffff07010000, name="FD710"), # Default no-speedbin fallback
+        GPUId(chip_id=0x07010000, name="FD710"),
+        GPUId(chip_id=0xffff07010000, name="FD710"),
     ], A6xxGPUInfo(
         CHIP.A7XX,
-        [a7xx_base, a7xx_gen1],
-        num_ccu = 4,
+        [a7xx_base, a7xx_gen1_untested, a7xx_gen1],
+        num_ccu = 3,
         tile_align_w = 64,
         tile_align_h = 32,
         tile_max_w = 1024,
@@ -1028,14 +1034,13 @@ add_gpus([
         raw_magic_regs = a730_raw_magic_regs,
     ))
 
-# Adreno 720
 add_gpus([
-        GPUId(chip_id=0x43020000, name="FD720"), # KGSL, no speedbin data
-        GPUId(chip_id=0xffff43020000, name="FD720"), # Default no-speedbin fallback
+        GPUId(chip_id=0x43020000, name="FD720"),
+        GPUId(chip_id=0xffff43020000, name="FD720"),
     ], A6xxGPUInfo(
         CHIP.A7XX,
-        [a7xx_base, a7xx_gen1],
-        num_ccu = 4,
+        [a7xx_base, a7xx_gen1_untested, a7xx_gen1],
+        num_ccu = 3,
         tile_align_w = 64,
         tile_align_h = 32,
         tile_max_w = 1024,
@@ -1049,6 +1054,25 @@ add_gpus([
         raw_magic_regs = a730_raw_magic_regs,
     ))
 
+add_gpus([
+        GPUId(chip_id=0x43020100, name="FD722"),
+        GPUId(chip_id=0xffff43020100, name="FD722"),
+    ], A6xxGPUInfo(
+        CHIP.A7XX,
+        [a7xx_base, a7xx_gen1_untested, a7xx_gen1],
+        num_ccu = 3,
+        tile_align_w = 64,
+        tile_align_h = 32,
+        tile_max_w = 1024,
+        tile_max_h = 1024,
+        num_vsc_pipes = 32,
+        cs_shared_mem_size = 64 * 1024,
+        wave_granularity = 2,
+        fibers_per_sp = 128 * 2 * 16,
+        highest_bank_bit = 16,
+        magic_regs = a730_magic_regs,
+        raw_magic_regs = a730_raw_magic_regs,
+    ))
 
 
 add_gpus([
@@ -1516,7 +1540,6 @@ add_gpus([
             gmem_vpc_pos_buf_size = 24576,
             gmem_vpc_bv_pos_buf_size = 32768,
             
-            disable_gmem = False,
             gmem_size = 2 * 1024 * 1024,
             shading_rate_matches_vk = True,
         )],
