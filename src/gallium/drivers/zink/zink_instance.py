@@ -37,6 +37,7 @@ import platform
 #  - nonstandard: Disables validation (cross-checking with vk.xml) if True.
 EXTENSIONS = [
     Extension("VK_EXT_debug_utils"),
+    Extension("VK_EXT_layer_settings"),
     Extension("VK_KHR_get_physical_device_properties2"),
     Extension("VK_KHR_external_memory_capabilities"),
     Extension("VK_KHR_external_semaphore_capabilities"),
@@ -47,8 +48,8 @@ EXTENSIONS = [
     Extension("VK_KHR_wayland_surface"),
     Extension("VK_KHR_xcb_surface"),
     Extension("VK_KHR_win32_surface"),
+    Extension("VK_EXT_swapchain_colorspace"),
     Extension("VK_KHR_android_surface"),
-    Extension("VK_EXT_swapchain_colorspace")
 ]
 
 if platform.system() == "Darwin":
@@ -64,6 +65,7 @@ LAYERS = [
       conditions=["zink_debug & ZINK_DEBUG_VALIDATION"]),
     Layer("VK_LAYER_LUNARG_standard_validation",
       conditions=["zink_debug & ZINK_DEBUG_VALIDATION", "!have_layer_KHRONOS_validation"]),
+    Layer("VK_LAYER_MESA_device_select")
 ]
 
 
@@ -90,6 +92,7 @@ struct zink_screen;
 
 struct zink_instance_info {
    uint32_t loader_version;
+   bool no_device_select;
 
 %for ext in extensions:
    bool have_${ext.name_with_vendor()};
@@ -149,10 +152,6 @@ zink_create_instance(struct zink_screen *screen, struct zink_instance_info *inst
    bool have_layer_${layer.pure_name()} = false;
 %endfor
 
-#if defined(MVK_VERSION)
-   bool have_moltenvk_layer = false;
-#endif
-
    GET_PROC_ADDR_INSTANCE_LOCAL(screen, NULL, EnumerateInstanceExtensionProperties);
    GET_PROC_ADDR_INSTANCE_LOCAL(screen, NULL, EnumerateInstanceLayerProperties);
    if (!vk_EnumerateInstanceExtensionProperties ||
@@ -204,7 +203,6 @@ zink_create_instance(struct zink_screen *screen, struct zink_instance_info *inst
 %endfor
 #if defined(MVK_VERSION)
                   if (!strcmp(layer_props[i].layerName, "MoltenVK")) {
-                     have_moltenvk_layer = true;
                      layers[num_layers++] = "MoltenVK";
                   }
 #endif
@@ -264,6 +262,20 @@ zink_create_instance(struct zink_screen *screen, struct zink_instance_info *inst
    ici.ppEnabledLayerNames = layers;
    ici.enabledLayerCount = num_layers;
 
+   VkLayerSettingEXT ds_layer = {0};
+   VkLayerSettingsCreateInfoEXT lsci = {0};
+   uint32_t no_device_select_value = instance_info->no_device_select;
+   if (have_EXT_layer_settings && have_layer_MESA_device_select) {
+       ds_layer.pLayerName = "MESA_device_select";
+       ds_layer.pSettingName = "no_device_select";
+       ds_layer.type = VK_LAYER_SETTING_TYPE_BOOL32_EXT;
+       ds_layer.valueCount = 1;
+       ds_layer.pValues = &no_device_select_value;
+       lsci.sType = VK_STRUCTURE_TYPE_LAYER_SETTINGS_CREATE_INFO_EXT;
+       lsci.settingCount = 1;
+       lsci.pSettings = &ds_layer;
+       ici.pNext = &lsci;
+   }
    GET_PROC_ADDR_INSTANCE_LOCAL(screen, NULL, CreateInstance);
    assert(vk_CreateInstance);
 
