@@ -1,0 +1,78 @@
+name: Android CI
+
+on: [workflow_dispatch]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        arch: [ "arm64", "armv7", "x86", "x86_64" ]
+      fail-fast: false
+
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Prepare environment
+      run: |
+        sudo sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
+        sudo apt update
+        sudo apt install build-essential flex bison glslang-tools
+        sudo apt install meson-1.5 python3-mako python3-markdown
+
+    - name: Build for Android ${{matrix.arch}}
+      run: |
+        echo "Building on: ${{ matrix.arch }}"
+        export MATRIX_ARCH="${{ matrix.arch }}"
+        export ANDROID_NDK_HOME=
+        pushd build-android
+        bash ./build_${{ matrix.arch }}.sh
+        bash ./build_${{ matrix.arch }}.sh turnip
+        popd
+
+    - name: Compress artifacts
+      run: |
+        pushd /tmp/zink-${{matrix.arch}}/lib && zip -j "$OLDPWD/mesa-${{matrix.arch}}.zip" libEGL_mesa.so libgallium_dri.so libdrm.so libvulkan_freedreno.so || true; popd
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: mesa-${{ matrix.arch }}
+        path: ./mesa-${{ matrix.arch }}.zip
+  aar:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Get packaging script
+      uses: actions/checkout@v6
+      with:
+        repository: 'MojoLauncher/mesaunified-packager'
+    - name: Install zip
+      run: sudo apt -y install zip unzip
+    - name: Get mesa-arm64
+      uses: actions/download-artifact@v4
+      with:
+        name: mesa-arm64
+        path: mesazip
+    - name: Get mesa-armv7
+      uses: actions/download-artifact@v4
+      with:
+        name: mesa-armv7
+        path: mesazip
+    - name: Get mesa-x86
+      uses: actions/download-artifact@v4
+      with:
+        name: mesa-x86
+        path: mesazip
+    - name: Get mesa-x86_64
+      uses: actions/download-artifact@v4
+      with:
+        name: mesa-x86_64
+        path: mesazip
+    - name: Pack AAR
+      run: bash create_aar.sh $GITHUB_WORKSPACE/mesazip
+    - name: Upload packaging result
+      uses: actions/upload-artifact@v7
+      with:
+        name: mesa-aar
+        path: mesa.aar
