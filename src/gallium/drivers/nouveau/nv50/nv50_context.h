@@ -282,7 +282,7 @@ struct pipe_context *nv50_create(struct pipe_screen *, void *, unsigned flags);
 
 void nv50_bufctx_fence(struct nv50_context *, struct nouveau_bufctx *, bool on_flush);
 
-void nv50_default_kick_notify(struct nouveau_context *);
+MUST_CHECK bool nv50_default_kick_notify(struct nouveau_context *);
 
 /* nv50_draw.c */
 extern struct draw_stage *nv50_draw_render_stage(struct nv50_context *);

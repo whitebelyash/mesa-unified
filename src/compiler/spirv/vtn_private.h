@@ -238,6 +238,7 @@ void vtn_emit_cf_func_structured(struct vtn_builder *b, struct vtn_function *fun
 bool vtn_handle_phis_first_pass(struct vtn_builder *b, SpvOp opcode,
                                 const uint32_t *w, unsigned count);
 void vtn_emit_ret_store(struct vtn_builder *b, const struct vtn_block *block);
+void vtn_handle_abort(struct vtn_builder *b, const uint32_t *w, unsigned count);
 void vtn_build_structured_cfg(struct vtn_builder *b, const uint32_t *words,
                               const uint32_t *end);
 

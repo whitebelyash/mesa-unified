@@ -1094,7 +1094,7 @@ r3d_common(struct tu_cmd_buffer *cmd, struct tu_cs *cs, enum r3d_type type,
 
    tu_cs_emit_regs(cs, VPC_RAST_STREAM_CNTL(CHIP));
    if (CHIP == A6XX) {
-      tu_cs_emit_regs(cs, VPC_UNKNOWN_9107(CHIP));
+      tu_cs_emit_regs(cs, PC_RAST_STREAM_CNTL(CHIP));
    } else {
       if (CHIP == A7XX)
          tu_cs_emit_regs(cs, VPC_RAST_STREAM_CNTL_V2(CHIP));

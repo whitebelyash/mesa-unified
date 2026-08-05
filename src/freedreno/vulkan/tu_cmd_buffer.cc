@@ -6367,6 +6367,7 @@ tu_CmdExecuteCommands(VkCommandBuffer commandBuffer,
           */
          if (!secondary->state.lrz.valid)
             cmd->state.lrz.valid = false;
+         cmd->state.lrz.disable_write_for_rp |= secondary->state.lrz.disable_write_for_rp;
          if (secondary->state.lrz.gpu_dir_set)
             cmd->state.lrz.gpu_dir_set = true;
          if (cmd->state.lrz.prev_direction == TU_LRZ_UNKNOWN &&
@@ -7256,8 +7257,10 @@ tu_CmdBeginRendering(VkCommandBuffer commandBuffer,
                              &cmd->state.vk_mv,
                              cmd->state.pass, cmd->state.subpass);
 
-   if (!resuming) {
+   if (!cmd->patchpoints_ctx)
       cmd->patchpoints_ctx = ralloc_context(NULL);
+
+   if (!resuming) {
       tu_emit_subpass_begin<CHIP>(cmd);
    }
 

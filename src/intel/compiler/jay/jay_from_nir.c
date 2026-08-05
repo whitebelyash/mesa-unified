@@ -1752,7 +1752,7 @@ jay_emit_intrinsic(struct nir_to_jay_state *nj, nir_intrinsic_instr *intr)
 
    switch (intr->intrinsic) {
    case nir_intrinsic_resource_intel:
-      /* No code to generate here */
+      jay_MOV(b, dst, nj_src(intr->src[1]));
       break;
 
    case nir_intrinsic_global_atomic:

@@ -50,13 +50,13 @@ traces:
 
   blender/blender-demo-ellie_pose.trace:
     gl-zink-anv-adl:
-      checksum: 0098bb7945cf985524358f1becd7dc96
+      checksum: c0b433fa9f758e3161af2bab57fbbdf4
     gl-zink-anv-tgl:
-      checksum: 0098bb7945cf985524358f1becd7dc96
+      checksum: c0b433fa9f758e3161af2bab57fbbdf4
     zink-radv-vangogh:
-      checksum: 04050fd3b0285aedfe6b139d3a900fc5
+      checksum: 78035aeafe1c8e7ddc72ae78f21807ec
     zink-radv-gfx1201:
-      checksum: 04050fd3b0285aedfe6b139d3a900fc5
+      checksum: 78035aeafe1c8e7ddc72ae78f21807ec
 
   glxgears/glxgears-2-v2.trace:
     gl-zink-anv-adl:
@@ -407,9 +407,9 @@ traces:
       checksum: 148ec1105f5f14c90cb756a178cef264
       text: note that this trace is stable on freedreno
     zink-radv-vangogh:
-      checksum: 38649d137f8f530d354406bc1ffd6257
+      checksum: b22a3f74b7f10dad2959fb26c61bbb12
     zink-radv-gfx1201:
-      checksum: 38649d137f8f530d354406bc1ffd6257
+      checksum: b22a3f74b7f10dad2959fb26c61bbb12
 
   valve/counterstrike-source-v2.trace:
     gl-zink-anv-adl:

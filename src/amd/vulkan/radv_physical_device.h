@@ -277,6 +277,8 @@ VkResult create_drm_physical_device(struct vk_instance *vk_instance, struct _drm
 
 void radv_physical_device_destroy(struct vk_physical_device *vk_pdev);
 
+bool radv_graphics_queue_enabled(const struct radv_physical_device *pdev);
+
 bool radv_transfer_queue_enabled(const struct radv_physical_device *pdev);
 
 bool radv_compute_queue_enabled(const struct radv_physical_device *pdev);

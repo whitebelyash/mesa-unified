@@ -326,13 +326,15 @@ bi_optimizer_result_type(bi_instr *I, bi_instr *mux)
    if (bi_get_opcode_props(I)->size != bi_get_opcode_props(mux)->size)
       return false;
 
+   enum bi_result_type result_type;
+
    if (bi_is_fixed_mux(mux, 32, bi_imm_f32(1.0)) ||
        bi_is_fixed_mux(mux, 16, bi_imm_f16(1.0))) {
 
       if (!bi_takes_float_result_type(I->op))
          return false;
 
-      I->result_type = BI_RESULT_TYPE_F1;
+      result_type = BI_RESULT_TYPE_F1;
    } else if (bi_is_fixed_mux(mux, 32, bi_imm_u32(1)) ||
               bi_is_fixed_mux(mux, 16, bi_imm_u16(1)) ||
               bi_is_fixed_mux(mux, 8, bi_imm_u8(1))) {
@@ -340,12 +342,29 @@ bi_optimizer_result_type(bi_instr *I, bi_instr *mux)
       if (!bi_takes_int_result_type(I->op))
          return false;
 
-      I->result_type = BI_RESULT_TYPE_I1;
+      result_type = BI_RESULT_TYPE_I1;
    } else {
       return false;
    }
 
+   /* The MUX condition may have a non-identity swizzle (e.g. H10 = swap).
+    * Compose that swizzle into the CMP sources so the fused CMP.f1/i1 compares
+    * the right lane pairs.
+    */
+   enum bi_swizzle swizzle = mux->src[2].swizzle;
+   if (swizzle != BI_SWIZZLE_H01) {
+      if (bi_get_opcode_props(I)->size != BI_SIZE_16)
+         return false;
+      /* Check if swizzles are composable */
+      if (swizzle > BI_SWIZZLE_H11)
+         return false;
+
+      I->src[0].swizzle = bi_compose_swizzle_16(swizzle, I->src[0].swizzle);
+      I->src[1].swizzle = bi_compose_swizzle_16(swizzle, I->src[1].swizzle);
+   }
+   I->result_type = result_type;
    I->dest[0] = mux->dest[0];
+
    return true;
 }
 

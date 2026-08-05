@@ -7307,8 +7307,8 @@ iris_upload_dirty_render_state(struct iris_context *ice,
           screen->driconf.intel_enable_wa_14024015672_msaa);
       if (batch->ice->state.rhwo_disabled != rhwo_disabled) {
          iris_emit_pipe_control_flush(batch, "RHWO state change",
-                                      PIPE_CONTROL_STALL_AT_SCOREBOARD |
-                                      PIPE_CONTROL_CS_STALL);
+                                      PIPE_CONTROL_RENDER_TARGET_FLUSH |
+                                      (GFX_VERx10 >= 125 ? 0 : PIPE_CONTROL_CS_STALL));
          batch->screen->vtbl.disable_rhwo_optimization(
             batch, rhwo_disabled);
       }

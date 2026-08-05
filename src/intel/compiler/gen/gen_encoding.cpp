@@ -1281,20 +1281,16 @@ struct gen_decoder {
             }
          }
 
-         if (desc->format == GEN_FORMAT_BASIC_TWO_SRC)
-            inst->src[1].type = decode_type(inst->src[1].file, get(E::SRC1_TYPE));
-         else
-            inst->src[1].file = GEN_BAD_FILE;
-
          if (desc->format == GEN_FORMAT_BASIC_TWO_SRC) {
-            inst->src[1].indirect = get(E::SRC1_ADDRESS_MODE);
-
             if (get(E::SRC1_IS_IMM)) {
                assert(imm_src == - 1);
                imm_src = 1;
                inst->src[1].file = GEN_IMM;
+            }
+            inst->src[1].type = decode_type(inst->src[1].file, get(E::SRC1_TYPE));
+            inst->src[1].indirect = get(E::SRC1_ADDRESS_MODE);
 
-            } else {
+            if (inst->src[1].file != GEN_IMM) {
                inst->src[1].negate   = get(E::SRC1_NEGATE);
                inst->src[1].abs      = get(E::SRC1_ABS);
 
@@ -1325,6 +1321,8 @@ struct gen_decoder {
                   inst->src[1].region.hstride = 0;
                }
             }
+         } else {
+            inst->src[1].file = GEN_BAD_FILE;
          }
 
          if (imm_src != -1) {

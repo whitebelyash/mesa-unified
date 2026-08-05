@@ -168,6 +168,8 @@
     PIGLIT_RESULTS: "${GPU_VERSION}-replay"
     PIGLIT_NO_WINDOW: 1
     HWCI_TEST_SCRIPT: "install/piglit/piglit-traces.sh"
+    EGL_PLATFORM: surfaceless
+    WAFFLE_PLATFORM: gbm
     # For downloading traces:
     CI_TRON_HTTP_ARTIFACT__TRACIE_PUBLIC__PATH: /caching_proxy/https://s3.freedesktop.org/mesa-tracie-public/(.*)
     CI_TRON_HTTP_ARTIFACT__TRACIE_PUBLIC__URL: https://s3.freedesktop.org/mesa-tracie-public/\1

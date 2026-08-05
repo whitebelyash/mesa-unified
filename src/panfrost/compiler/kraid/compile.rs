@@ -104,25 +104,15 @@ pub extern "C" fn kraid_get_nir_shader_compiler_options(
     arch: u8,
     merge_wg: bool,
 ) -> *const nir_shader_compiler_options {
-    static OPTS: OnceLock<
-        HashMap<
-            (u8, bool),
-            // Somebody did something silly and put a callback in
-            // nir_shader_compiler_options and now it's not Send so
-            // we can't put it in a OnceLock.  Work around that by
-            // stashing a u8 array instead
-            [u8; std::mem::size_of::<nir_shader_compiler_options>()],
-        >,
-    > = OnceLock::new();
+    static OPTS: OnceLock<HashMap<(u8, bool), nir_shader_compiler_options>> =
+        OnceLock::new();
 
     let opts = OPTS
         .get_or_init(|| {
             let mut map = HashMap::new();
             for arch in 9..=15 {
                 for merge_wg in [false, true] {
-                    let opts = unsafe {
-                        std::mem::transmute(nir_opts(arch, merge_wg))
-                    };
+                    let opts = nir_opts(arch, merge_wg);
                     map.insert((arch, merge_wg), opts);
                 }
             }
@@ -131,7 +121,7 @@ pub extern "C" fn kraid_get_nir_shader_compiler_options(
         .get(&(arch, merge_wg))
         .expect("Unsupported GPU arch");
 
-    unsafe { std::mem::transmute(opts) }
+    opts as *const _
 }
 
 fn dynarray_append_vec<T: Copy>(buf: &mut util_dynarray, vec: Vec<T>) {

@@ -371,15 +371,72 @@ etna_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info,
       return;
    }
 
+   struct etna_shader_key key = {
+      .front_ccw = ctx->rasterizer->front_ccw,
+      .sprite_coord_enable = ctx->rasterizer->sprite_coord_enable,
+      .sprite_coord_yinvert = !!ctx->rasterizer->sprite_coord_mode,
+   };
+
+   if (screen->info->halti >= 5)
+      key.flatshade = ctx->rasterizer->flatshade;
+
+   /* On LINEAR_PE GPUs rendering directly to a linear shared resource,
+    * use shader-based R/B swap so bytes in memory have the correct order
+    * for external consumers. This avoids a dedicated flush-time blit.
+    * Per-RT bitmask so MRT with mixed shared/non-shared targets works. */
+   if (VIV_FEATURE(screen, ETNA_FEATURE_LINEAR_PE)) {
+      for (i = 0; i < pfb->nr_cbufs; i++) {
+         if (pfb->cbufs[i].texture) {
+            struct etna_resource *rsc = etna_resource(pfb->cbufs[i].texture);
+            if (rsc->shared && rsc->layout == ETNA_LAYOUT_LINEAR &&
+                translate_pe_format_rb_swap(pfb->cbufs[i].format)) {
+               key.frag_rb_swap |= (1 << i);
+            }
+         }
+      }
+   }
+
+   key.rt_is_128bit = ctx->framebuffer_s.rt_is_128bit;
+   key.has_128bit_rt = !!key.rt_is_128bit;
+   for (i = 0; i < ARRAY_SIZE(key.rt_companion); i++)
+      key.rt_companion[i] = ctx->framebuffer_s.rt_companion[i];
+
+   if (!etna_get_vs(ctx, &key) || !etna_get_fs(ctx, &key)) {
+      BUG("compiled shaders are not okay");
+      return;
+   }
+
+   /* Update any derived state */
+   if (ctx->dirty && !etna_state_update(ctx))
+      return;
+
+   u_foreach_bit(i, ctx->active_sampler_views) {
+      /* If a texture was modified since the last update, we need to clear the
+       * texture cache and possibly resolve TS or a sampler compatible sibling.
+       */
+      etna_update_sampler_source(ctx->sampler_view[i], i);
+   }
+
+   /* Now that we know which states need to be emitted for this draw, reserve
+    * the space for them in the cmdstream. This will possibly cause a flush of
+    * the context, so this needs to be done before mutating any of the state
+    * tracking data structures in the context that get reset on flush.
+    *
+    * After this point there must be no other states emitted into the cmdstream
+    * aside from the draw state updates that have been reserved.
+    */
+   etna_reserve_emit_space(ctx);
+
    if (ctx->needs_gpu_state_reset)
       etna_reset_gpu_state(ctx);
 
-   /* Upload a user index buffer. */
-   unsigned index_offset = 0;
    struct pipe_resource *indexbuf = NULL;
 
    if (info->index_size) {
       indexbuf = info->has_user_indices ? NULL : info->index.resource;
+      unsigned index_offset = 0;
+
+      /* Upload a user index buffer. */
       if (info->has_user_indices &&
           !util_upload_index_buffer(pctx, info, &draws[0], &indexbuf, &index_offset, 4)) {
          BUG("Index buffer upload failed.");
@@ -419,45 +476,6 @@ etna_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info,
          ctx->dirty |= ETNA_DIRTY_INDEX_BUFFER;
       }
    }
-
-   struct etna_shader_key key = {
-      .front_ccw = ctx->rasterizer->front_ccw,
-      .sprite_coord_enable = ctx->rasterizer->sprite_coord_enable,
-      .sprite_coord_yinvert = !!ctx->rasterizer->sprite_coord_mode,
-   };
-
-   if (screen->info->halti >= 5)
-      key.flatshade = ctx->rasterizer->flatshade;
-
-   /* On LINEAR_PE GPUs rendering directly to a linear shared resource,
-    * use shader-based R/B swap so bytes in memory have the correct order
-    * for external consumers. This avoids a dedicated flush-time blit.
-    * Per-RT bitmask so MRT with mixed shared/non-shared targets works. */
-   if (VIV_FEATURE(screen, ETNA_FEATURE_LINEAR_PE)) {
-      for (i = 0; i < pfb->nr_cbufs; i++) {
-         if (pfb->cbufs[i].texture) {
-            struct etna_resource *rsc = etna_resource(pfb->cbufs[i].texture);
-            if (rsc->shared && rsc->layout == ETNA_LAYOUT_LINEAR &&
-                translate_pe_format_rb_swap(pfb->cbufs[i].format)) {
-               key.frag_rb_swap |= (1 << i);
-            }
-         }
-      }
-   }
-
-   key.rt_is_128bit = ctx->framebuffer_s.rt_is_128bit;
-   key.has_128bit_rt = !!key.rt_is_128bit;
-   for (i = 0; i < ARRAY_SIZE(key.rt_companion); i++)
-      key.rt_companion[i] = ctx->framebuffer_s.rt_companion[i];
-
-   if (!etna_get_vs(ctx, &key) || !etna_get_fs(ctx, &key)) {
-      BUG("compiled shaders are not okay");
-      return;
-   }
-
-   /* Update any derived state */
-   if (ctx->dirty && !etna_state_update(ctx))
-      return;
 
    /*
     * Figure out the buffers/features we need:
@@ -504,16 +522,10 @@ etna_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info,
       resource_read(ctx, indexbuf);
    }
 
-   /* Mark textures as being read */
-   u_foreach_bit(i, ctx->active_sampler_views) {
-      if (ctx->dirty & ETNA_DIRTY_SAMPLER_VIEWS)
-            resource_read(ctx, ctx->sampler_view[i]->texture);
-
-      /* if texture was modified since the last update,
-       * we need to clear the texture cache and possibly
-       * resolve/update ts
-       */
-      etna_update_sampler_source(ctx->sampler_view[i], i);
+   if (ctx->dirty & ETNA_DIRTY_SAMPLER_VIEWS) {
+      /* Mark textures as being read */
+      u_foreach_bit(i, ctx->active_sampler_views)
+         resource_read(ctx, ctx->sampler_view[i]->texture);
    }
 
    /* Mark streamout buffers as being written. */

@@ -166,11 +166,6 @@ spec@arb_copy_image@arb_copy_image-formats --samples=4@Source: GL_R32F/Destinati
 spec@arb_copy_image@arb_copy_image-formats --samples=8,Fail
 spec@arb_copy_image@arb_copy_image-formats --samples=8@Source: GL_RGB32I/Destination: GL_RGB32F,Fail
 spec@arb_copy_image@arb_copy_image-formats --samples=8@Source: GL_RGB32UI/Destination: GL_RGB32F,Fail
-spec@arb_compute_shader@execution@shared-atomicadd-int,Fail
-spec@arb_compute_shader@execution@shared-atomiccompswap-int,Fail
-spec@arb_compute_shader@execution@shared-atomicexchange-int,Fail
-spec@arb_compute_shader@execution@shared-atomics,Fail
-spec@arb_compute_shader@execution@simple-barrier,Fail
 spec@arb_depth_buffer_float@fbo-stencil-gl_depth32f_stencil8-blit,Fail
 spec@arb_depth_buffer_float@texwrap formats bordercolor,Fail
 spec@arb_depth_buffer_float@texwrap formats bordercolor-swizzled,Fail
@@ -860,7 +855,6 @@ spec@glsl-1.50@execution@geometry@tri-strip-ordering-with-prim-restart gl_triang
 spec@glsl-1.50@execution@geometry@tri-strip-ordering-with-prim-restart gl_triangle_strip_adjacency other,Fail
 spec@glsl-1.50@execution@primitive-id-no-gs-quad-strip,Fail
 spec@glsl-1.50@execution@primitive-id-no-gs-quads,Fail
-spec@glsl-1.50@execution@out-of-ssa-dfs-pre-order,Fail
 spec@glsl-1.50@execution@variable-indexing@gs-output-array-vec4-index-wr,Fail
 spec@glsl-1.50@gs-max-output,Fail
 spec@glsl-1.50@gs-max-output-components,Fail

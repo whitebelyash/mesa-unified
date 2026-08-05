@@ -3282,12 +3282,17 @@ radv_prepare_dgc(struct radv_cmd_buffer *cmd_buffer, const VkGeneratedCommandsIn
    get_dgc_cmdbuf_layout(device, layout, ies, pGeneratedCommandsInfo->pNext, sequences_count, use_preamble,
                          &cmdbuf_layout);
 
-   assert((cmdbuf_layout.main_offset + pGeneratedCommandsInfo->preprocessAddress) %
-             pdev->info.ip[AMD_IP_GFX].ib_alignment ==
-          0);
-   assert((cmdbuf_layout.ace_main_offset + pGeneratedCommandsInfo->preprocessAddress) %
-             pdev->info.ip[AMD_IP_COMPUTE].ib_alignment ==
-          0);
+   if (radv_graphics_queue_enabled(pdev)) {
+      assert((cmdbuf_layout.main_offset + pGeneratedCommandsInfo->preprocessAddress) %
+                pdev->info.ip[AMD_IP_GFX].ib_alignment ==
+             0);
+   }
+
+   if (radv_compute_queue_enabled(pdev)) {
+      assert((cmdbuf_layout.ace_main_offset + pGeneratedCommandsInfo->preprocessAddress) %
+                pdev->info.ip[AMD_IP_COMPUTE].ib_alignment ==
+             0);
+   }
 
    struct radv_dgc_params params = {
       .cmd_buf_preamble_offset = cmdbuf_layout.main_preamble_offset,

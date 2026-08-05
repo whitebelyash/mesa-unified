@@ -755,7 +755,7 @@ should_convert_to_begin_end(struct gl_context *ctx, unsigned count,
     * Others prevent syncing, such as disallowing buffer objects because we
     * can't map them without syncing.
     */
-   return !_mesa_is_desktop_gl_compat(ctx) &&
+   return _mesa_is_desktop_gl_compat(ctx) &&
           util_is_vbo_upload_ratio_too_large(count, num_upload_vertices) &&
           instance_count == 1 &&                /* no instancing */
           vao->CurrentElementBufferName == 0 && /* only user indices */

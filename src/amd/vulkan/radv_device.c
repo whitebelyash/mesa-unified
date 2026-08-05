@@ -1203,7 +1203,7 @@ radv_device_init_compiler_info(struct radv_device *device)
             .force_64_byte_sampled_image = pdev->force_64_byte_sampled_image,
             .robust_buffer_access = pdev->use_llvm && (device->vk.enabled_features.robustBufferAccess2 ||
                                                        device->vk.enabled_features.robustBufferAccess),
-            .coop_matrix_robust_buffer_access = device->vk.enabled_features.cooperativeMatrixRobustBufferAccess,
+            .coop_matrix_robust_buffer_access = false,
             .mitigate_smem_oob = pdev->info.compiler_info.has_smem_oob_access_bug &&
                                  !(instance->debug_flags & RADV_DEBUG_NO_SMEM_MITIGATION),
             .mitigate_smem_with_null_prt =

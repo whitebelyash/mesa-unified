@@ -954,7 +954,7 @@ fd6_emit_static_context_regs(struct fd_context *ctx, fd_cs &cs)
 
    crb.add(A6XX_VFD_MODE_CNTL(.vertex = true, .instance = true));
    if (CHIP == A6XX)
-      crb.add(VPC_UNKNOWN_9107(CHIP));
+      crb.add(PC_RAST_STREAM_CNTL(CHIP));
    crb.add(A6XX_RB_MODE_CNTL(.dword = 0x00000010));
    crb.add(GRAS_LRZ_PS_INPUT_CNTL(CHIP));
    crb.add(A6XX_GRAS_LRZ_PS_SAMPLEFREQ_CNTL());

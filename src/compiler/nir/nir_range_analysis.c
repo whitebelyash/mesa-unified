@@ -2056,8 +2056,11 @@ get_alu_uub(struct analysis_state *state, struct scalar_query q, uint32_t *resul
    /* limited floating-point support for f2u32(fmul(load_input(), <constant>)) */
    case nir_op_f2i32:
    case nir_op_f2u32:
-      /* infinity/NaN starts at 0x7f800000u, negative numbers at 0x80000000 */
-      if (src[0] < 0x7f800000u) {
+      /* infinity/NaN starts at 0x7f800000u, negative numbers at 0x80000000
+       * but conversions to uint32_t are undefined for values larger than UINT32_MAX,
+       * so clamp.
+       */
+      if (src[0] < 0x4f800000u) {
          float val;
          memcpy(&val, &src[0], 4);
          *result = (uint32_t)val;

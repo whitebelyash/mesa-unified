@@ -6,6 +6,8 @@
 #include "nir.h"
 #include "nir_builder.h"
 
+#include "util/u_dynarray.h"
+
 typedef struct {
    nir_variable_mode modes;
    nir_address_format from;
@@ -63,8 +65,13 @@ convert_def(nir_builder *b, nir_def *def, convert_address_format_state *state)
 
    /* Check if all uses support the new address format. If not, convert them
     * back to the old format.
+    *
+    * This is done in two passes, so that we aren't creating a new use of
+    * the def (ie. the address conversion) while we are still iterating the
+    * original uses.
     */
-   nir_def *addr = NULL;
+
+   struct util_dynarray rewrites = UTIL_DYNARRAY_INIT;
 
    nir_foreach_use_safe(use, def) {
       nir_instr *instr = nir_src_use_instr(use);
@@ -76,12 +83,21 @@ convert_def(nir_builder *b, nir_def *def, convert_address_format_state *state)
          nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
 
          switch (intrin->intrinsic) {
-         case nir_intrinsic_load_deref:
          case nir_intrinsic_store_deref:
-         case nir_intrinsic_load_deref_block_intel:
          case nir_intrinsic_store_deref_block_intel:
          case nir_intrinsic_deref_atomic:
          case nir_intrinsic_deref_atomic_swap:
+            /* These all take a deref as the first src, followed by one or
+             * more non-deref args.  If a non-deref src is the use, it must
+             * be converted back to the original address format.
+             */
+            if (&intrin->src[0] == use)
+               continue;
+
+            break;
+
+         case nir_intrinsic_load_deref:
+         case nir_intrinsic_load_deref_block_intel:
          case nir_intrinsic_deref_buffer_array_length:
          case nir_intrinsic_deref_mode_is:
          case nir_intrinsic_launch_mesh_workgroups_with_payload_deref:
@@ -93,14 +109,28 @@ convert_def(nir_builder *b, nir_def *def, convert_address_format_state *state)
          }
       }
 
+      util_dynarray_append(&rewrites, use);
+   }
+
+   nir_def *addr = NULL;
+
+   /* Second pass, now that we've found all the original use's that need
+    * conversion, we can safely create the address conversion (which
+    * would have created a new use that _shouldn't_ be re-written if
+    * we did this as part of the first loop), and re-write the needed
+    * uses:
+    */
+
+   util_dynarray_foreach (&rewrites, nir_src *, usep) {
       if (!addr) {
          b->cursor = nir_after_instr(nir_def_instr(def));
          addr =
             nir_build_convert_address_format(b, def, state->to, state->from);
       }
-
-      nir_src_rewrite(use, addr);
+      nir_src_rewrite(*usep, addr);
    }
+
+   util_dynarray_fini(&rewrites);
 }
 
 static void

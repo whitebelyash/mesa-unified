@@ -174,7 +174,7 @@ kosmickrisp_mesa_icd = custom_target(
   output : 'kosmickrisp_mesa_icd.' + vulkan_manifest_suffix,
   command : [
     prog_python, '@INPUT0@',
-    '--api-version', '1.3', '--xml', '@INPUT1@',
+    '--api-version', '1.4', '--xml', '@INPUT1@',
     '--icd-lib-path', vulkan_icd_lib_path,
     '--icd-filename', icd_file_name,
     '--out', '@OUTPUT@',
@@ -191,7 +191,7 @@ kosmickrisp_icd = custom_target(
   output : 'kosmickrisp_mesa_devenv_icd.@0@.json'.format(host_machine.cpu()),
   command : [
     prog_python, '@INPUT0@',
-    '--api-version', '1.3', '--xml', '@INPUT1@',
+    '--api-version', '1.4', '--xml', '@INPUT1@',
     '--icd-lib-path', meson.current_build_dir(),
     '--icd-filename', icd_file_name,
     '--out', '@OUTPUT@',

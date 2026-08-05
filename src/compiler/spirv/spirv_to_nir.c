@@ -863,9 +863,15 @@ vtn_handle_debug_printf(struct vtn_builder *b, SpvOp ext_opcode,
          fields[i].name = "";
          fields[i].offset = next_offset;
 
-         int size = (int) arg->def->bit_size * arg->def->num_components / 8;
+         unsigned num_components =
+            arg->def->num_components == 3 ? 4 : arg->def->num_components;
+
+         int size = (int) arg->def->bit_size * num_components / 8;
          info->arg_sizes[i] = size;
+
+         /* Match u_printf_impl, which 4-aligns each argument as it reads. */
          next_offset += size;
+         next_offset = align(next_offset, 4);
       }
 
       nir_variable *packed_args = nir_local_variable_create(
@@ -6881,7 +6887,7 @@ vtn_handle_allocate_node_payloads(struct vtn_builder *b, SpvOp opcode,
    nir_initialize_node_payloads(&b->nb, payloads, payload_count, node_index, .execution_scope = scope);
 }
 
-static void
+void
 vtn_handle_abort(struct vtn_builder *b, const uint32_t *w, unsigned count)
 {
    struct vtn_type *msg_type = vtn_get_type(b, w[1]);
@@ -7450,10 +7456,6 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpCooperativeMatrixReduceNV:
    case SpvOpCooperativeMatrixPerElementOpNV:
       vtn_handle_cooperative_instruction(b, opcode, w, count);
-      break;
-
-   case SpvOpAbortKHR:
-      vtn_handle_abort(b, w, count);
       break;
 
    default:

@@ -1241,6 +1241,9 @@ VkResult anv_CreateDevice(
          if (result != VK_SUCCESS)
             goto fail_queues;
 
+         device->view_queues |=
+            device->queues[device->queue_count].family->queueFlags &
+            (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
          device->queue_count++;
       }
    }

@@ -4080,7 +4080,7 @@ va_count_stats(bi_context *ctx, unsigned nr_ins, unsigned size,
    }
 
    stats.alu = va_compute_alu_bound(arch, stats.fma, stats.cvt, stats.sfu);
-   stats.cycles = MAX4(out->alu, stats.v, stats.t, stats.ls);
+   stats.cycles = MAX4(stats.alu, stats.v, stats.t, stats.ls);
 
    *out = stats;
 }

@@ -1912,7 +1912,7 @@ skip_smem_offset_align(opt_ctx& ctx, SMEM_instruction* smem, uint32_t align)
          continue;
 
       if (new_op.isTemp()) {
-         op.setTemp(op.getTemp());
+         op.setTemp(new_op.getTemp());
       } else {
          assert(new_op.isFixed());
          op = new_op;

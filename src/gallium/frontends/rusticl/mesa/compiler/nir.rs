@@ -505,6 +505,10 @@ impl NirShader {
     pub fn source_hash(&self) -> &[u8] {
         &unsafe { self.nir.as_ref() }.info.source_blake3
     }
+
+    pub fn has_function(&self, name: &CStr) -> bool {
+        unsafe { !nir_shader_get_function_for_name(self.nir.as_ptr(), name.as_ptr()).is_null() }
+    }
 }
 
 impl Clone for NirShader {

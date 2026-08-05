@@ -9,6 +9,7 @@ use crate::core::platform::*;
 use crate::core::util::*;
 use crate::core::version::*;
 use crate::impl_cl_type_trait_base;
+use crate::rusticl_warn_once;
 
 use mesa_rust::compiler::clc::spirv::SPIRVToNirOptions;
 use mesa_rust::compiler::clc::*;
@@ -1533,8 +1534,21 @@ impl Device {
         spirv_to_nir_opts.caps = &spirv_caps;
 
         let lib_clc = spirv::SPIRVBin::get_lib_clc(dev_base.screen(), spirv_to_nir_opts);
-        if lib_clc.is_none() {
-            eprintln!("Libclc failed to load. Please make sure it is installed and provides spirv-mesa3d-.spv and/or spirv64-mesa3d-.spv");
+        match &lib_clc {
+            None => eprintln!(
+                "Libclc failed to load. Please make sure it is installed and provides
+                spirv-mesa3d-.spv and/or spirv64-mesa3d-.spv"
+            ),
+            Some(libclc) => {
+                if !libclc.has_function(c"__clc_mesa_libclc_version") {
+                    rusticl_warn_once!(
+                        "Patched Mesa libclc not detected. Upstream libclc may contain known bugs \
+                        or breaking changes and isn't guaranteed to work reliably. Please visit \
+                        https://gitlab.freedesktop.org/karolherbst/mesa-libclc for more \
+                        information."
+                    );
+                }
+            }
         }
 
         Some(Device {

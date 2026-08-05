@@ -664,8 +664,8 @@ zink_bo_map(struct zink_screen *screen, struct zink_bo *bo)
       offset = bo->offset - real->offset;
    }
 
-   if (p_atomic_inc_return(&real->u.real.map_count) > 1)
-      cpu = p_atomic_read(&real->u.real.cpu_ptr);
+   p_atomic_inc(&real->u.real.map_count);
+   cpu = p_atomic_read(&real->u.real.cpu_ptr);
    if (!cpu) {
       simple_mtx_lock(&real->lock);
       /* Must re-check due to the possibility of a race. Re-check need not
@@ -700,14 +700,18 @@ zink_bo_unmap(struct zink_screen *screen, struct zink_bo *bo)
 
    if (p_atomic_dec_zero(&real->u.real.map_count)) {
       simple_mtx_lock(&real->lock);
-      /* Re-check in case of race with zink_bo_map */
-      if (!p_atomic_read(&real->u.real.map_count)) {
-         p_atomic_set(&real->u.real.cpu_ptr, NULL);
+      void *cpu_ptr = real->u.real.cpu_ptr;
+      p_atomic_set(&real->u.real.cpu_ptr, NULL);
+
+      if (p_atomic_read(&real->u.real.map_count) == 0) {
          if (unlikely(zink_debug & ZINK_DEBUG_MAP)) {
             p_atomic_add(&screen->mapped_vram, -real->base.size);
             mesa_loge("UNMAP(%"PRIu64") TOTAL(%"PRIu64")", real->base.size, screen->mapped_vram);
          }
+
          VKSCR(UnmapMemory)(screen->dev, real->mem);
+      } else {
+         p_atomic_set(&real->u.real.cpu_ptr, cpu_ptr);
       }
       simple_mtx_unlock(&real->lock);
    }

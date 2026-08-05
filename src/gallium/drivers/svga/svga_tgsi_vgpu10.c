@@ -6476,7 +6476,7 @@ emit_memory_declarations(struct svga_shader_emitter_v10 *emit)
       /* Current state tracker only declares one shared memory for GLSL.
        * Use index 0 for this shared memory.
        */
-      emit_dword(emit, 0);
+      emit_dword(emit, TGSI_MEMORY_TYPE_SHARED);
       emit_dword(emit, emit->key.cs.mem_size); /* byte Count */
       end_emit_instruction(emit);
    }

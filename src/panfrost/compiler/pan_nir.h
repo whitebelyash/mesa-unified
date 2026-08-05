@@ -60,7 +60,7 @@ pan_nir_res_handle(nir_builder *b, uint32_t table,
    }
 }
 
-static nir_def *
+static inline nir_def *
 pan_nir_load_va_desc(nir_builder *b, unsigned num_components, unsigned bit_size,
                      nir_def *handle, uint32_t offset)
 {
@@ -78,7 +78,7 @@ pan_nir_load_va_desc(nir_builder *b, unsigned num_components, unsigned bit_size,
                         .align_offset = offset);
 }
 
-static nir_def *
+static inline nir_def *
 pan_nir_load_va_buf_cvt(nir_builder *b, nir_def *handle)
 {
    /* Dword 7 of the buffer descriptor type is unused by hardware and is

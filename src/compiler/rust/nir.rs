@@ -10,6 +10,9 @@ use std::marker::PhantomData;
 use std::mem::offset_of;
 use std::str;
 
+unsafe impl Send for nir_shader_compiler_options {}
+unsafe impl Sync for nir_shader_compiler_options {}
+
 pub struct ExecListIter<'a, T> {
     n: &'a exec_node,
     offset: usize,

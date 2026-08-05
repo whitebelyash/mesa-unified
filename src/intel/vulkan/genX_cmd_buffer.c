@@ -2411,18 +2411,24 @@ ALWAYS_INLINE void
 genX(cmd_buffer_apply_pipe_flushes)(struct anv_cmd_buffer *cmd_buffer)
 {
 #if INTEL_WA_1508744258_GFX_VER || INTEL_WA_14024015672_GFX_VER
-   /* If we're changing the state of the RHWO optimization, we need to have
-    * sb_stall+cs_stall.
+   /* If we're changing the state of the RHWO optimization we have to :
+    *
+    *    - on >= Gfx12.5+, RT flush, 3DSTATE_3D_MODE being non pipelined,
+    *      it'll fence following shader RCC operations
+    *
+    *    - on < Gfx12.5, RT flush + CS stall because we need to make sure all
+    *      previous RCC operations have completed before we touch the
+    *      COMMON_SLICE_CHICKEN1 register with MI commands
     */
    const bool rhwo_opt_change =
       cmd_buffer->state.rhwo_optimization_enabled !=
       cmd_buffer->state.pending_rhwo_optimization_enabled;
    if (rhwo_opt_change) {
       anv_add_pending_pipe_bits(cmd_buffer,
-                                VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-                                VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-                                ANV_PIPE_STALL_AT_SCOREBOARD_BIT |
-                                ANV_PIPE_END_OF_PIPE_SYNC_BIT,
+                                VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                                VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                                ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT |
+                                (GFX_VERx10 >= 125 ? 0 : ANV_PIPE_CS_STALL_BIT),
                                 "change RHWO optimization");
    }
 #endif
@@ -4208,6 +4214,14 @@ end_command_buffer(struct anv_cmd_buffer *cmd_buffer,
       genX(cmd_buffer_set_protected_memory)(cmd_buffer, false);
 #endif
 
+#if GFX_VER >= 20
+   if (cmd_buffer->vk.level == VK_COMMAND_BUFFER_LEVEL_PRIMARY &&
+       anv_cmd_buffer_is_render_queue(cmd_buffer) &&
+       cmd_buffer->state.gfx.indirect_data_stride_set) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(STATE_BYTE_STRIDE), sb_stride);
+   }
+#endif
+
    trace_intel_end_cmd_buffer(&cmd_buffer->trace,
                               (uintptr_t)(vk_command_buffer_to_handle(&cmd_buffer->vk)),
                               cmd_buffer->vk.level);
@@ -4410,10 +4424,8 @@ genX(CmdExecuteCommands)(
       /* Copy the mode of the secondary if set, at the next draw if things
        * don't match we will reprogram.
        */
-      if (secondary->state.gfx.indirect_data_stride_aligned !=
-          U_TRISTATE_UNSET) {
-         container->state.gfx.indirect_data_stride_aligned =
-            secondary->state.gfx.indirect_data_stride_aligned;
+      if (secondary->state.gfx.indirect_data_stride_set) {
+         container->state.gfx.indirect_data_stride_set = true;
          container->state.gfx.indirect_data_stride =
             secondary->state.gfx.indirect_data_stride;
       }

@@ -28,6 +28,19 @@
 #include "util/u_math.h"
 #include "util/u_printf.h"
 
+static unsigned
+printf_args_size(const u_printf_info *info)
+{
+   unsigned size = 0;
+
+   for (unsigned i = 0; i < info->num_args; i++) {
+      size += info->arg_sizes[i];
+      size = align(size, 4);
+   }
+
+   return size;
+}
+
 static bool
 lower_printf_intrin(nir_builder *b, nir_intrinsic_instr *prntf, void *_options)
 {
@@ -68,16 +81,16 @@ lower_printf_intrin(nir_builder *b, nir_intrinsic_instr *prntf, void *_options)
    }
 
    uint32_t fmt_str_id = nir_intrinsic_fmt_idx(prntf);
+   assert(fmt_str_id - 1 < b->shader->printf_info_count && "must be in-bounds");
+   const u_printf_info *printf_info = &b->shader->printf_info[fmt_str_id - 1];
+
    if (options->hash_format_strings) {
       /* Rather than store the index of the format string, instead store the
        * hash of the format string itself. This is invariant across shaders
        * which may be more convenient.
        */
-      assert(fmt_str_id - 1 < b->shader->printf_info_count && "must be in-bounds");
-
-      u_printf_singleton_add(&b->shader->printf_info[fmt_str_id - 1], 1);
-      uint32_t hash = u_printf_hash(&b->shader->printf_info[fmt_str_id - 1]);
-      fmt_str_id = hash;
+      u_printf_singleton_add(printf_info, 1);
+      fmt_str_id = u_printf_hash(printf_info);
    }
 
    /* Atomic add a buffer size counter to determine where to write. If
@@ -87,14 +100,14 @@ lower_printf_intrin(nir_builder *b, nir_intrinsic_instr *prntf, void *_options)
       nir_build_deref_cast(b, buffer_addr, nir_var_mem_global,
                            glsl_array_type(glsl_uint8_t_type(), 0, 1), 0);
 
-   /* Align the struct size to 4 */
    nir_deref_instr *args = nir_src_as_deref(prntf->src[0]);
 
    int args_size = 0;
    int fmt_str_id_size = 4;
    if (args != NULL) {
       assert(glsl_type_is_struct_or_ifc(args->type));
-      args_size = align(glsl_get_cl_size(args->type), 4);
+      assert(printf_info->num_args == glsl_get_length(args->type));
+      args_size = printf_args_size(printf_info);
    }
 
    /* Increment the counter at the beginning of the buffer */
@@ -236,7 +249,7 @@ nir_vprintf_fmt(nir_builder *b, unsigned ptr_bit_size, const char *fmt, va_list 
 
       ASSERTED nir_def *def = va_arg(ap, nir_def *);
       assert(def->bit_size / 8 == arg_size);
-      arg_size *= def->num_components;
+      arg_size *= def->num_components == 3 ? 4 : def->num_components;
 
       info.num_args++;
       info.arg_sizes = reralloc(b->shader, info.arg_sizes, unsigned,

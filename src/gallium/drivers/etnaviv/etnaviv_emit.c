@@ -91,11 +91,15 @@ etna_stall(struct etna_cmd_stream *stream, uint32_t from, uint32_t to)
    etna_coalsence_emit_reloc(stream, &coalesce, VIVS_##state_name, src_value)
 
 #define ETNA_3D_CONTEXT_SIZE  (400) /* keep this number above "Total state updates (fixed)" from gen_weave_state tool */
+#define ETNA_RESET_GPU_STATE_SIZE (128) /* keep this number above the number of words etna_reset_gpu_state() emits */
 
-static unsigned
-required_stream_size(struct etna_context *ctx)
+void
+etna_reserve_emit_space(struct etna_context *ctx)
 {
-   unsigned size = ETNA_3D_CONTEXT_SIZE;
+   size_t size = ETNA_3D_CONTEXT_SIZE;
+
+   if (ctx->needs_gpu_state_reset)
+      size += ETNA_RESET_GPU_STATE_SIZE;
 
    /* stall + flush */
    size += 2 + 4;
@@ -117,7 +121,7 @@ required_stream_size(struct etna_context *ctx)
    /* reserve for alignment etc. */
    size += 64;
 
-   return size;
+   etna_cmd_stream_reserve(ctx->stream, size);
 }
 
 /* Emit state that only exists on HALTI5+ */
@@ -249,11 +253,6 @@ etna_emit_state(struct etna_context *ctx)
        !ctx->dirty_sampler_views &&
        likely(!DBG_ENABLED(ETNA_DBG_CFLUSH_ALL)))
       return;
-
-   /* Pre-reserve the command buffer space which we are likely to need.
-    * This must cover all the state emitted below, and the following
-    * draw command. */
-   etna_cmd_stream_reserve(stream, required_stream_size(ctx));
 
    uint32_t dirty = ctx->dirty;
 

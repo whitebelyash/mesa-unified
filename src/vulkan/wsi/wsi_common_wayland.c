@@ -1475,6 +1475,12 @@ static const struct wp_presentation_listener presentation_listener = {
    presentation_handle_clock_id,
 };
 
+#if defined(WL_FIXES_ACK_GLOBAL_REMOVE)
+#define MESA_WL_FIXES_VERSION 2
+#elif defined(WL_FIXES_INTERFACE)
+#define MESA_WL_FIXES_VERSION 1
+#endif
+
 static void
 registry_handle_global(void *data, struct wl_registry *registry,
                        uint32_t name, const char *interface, uint32_t version)
@@ -1496,10 +1502,10 @@ registry_handle_global(void *data, struct wl_registry *registry,
       } else if (strcmp(interface, wp_linux_drm_syncobj_manager_v1_interface.name) == 0) {
          display->wl_syncobj =
             wl_registry_bind(registry, name, &wp_linux_drm_syncobj_manager_v1_interface, 1);
-#ifdef WL_FIXES_INTERFACE
+#ifdef MESA_WL_FIXES_VERSION
       } else if (strcmp(interface, wl_fixes_interface.name) == 0) {
          display->wl_fixes =
-            wl_registry_bind(registry, name, &wl_fixes_interface, 1);
+            wl_registry_bind(registry, name, &wl_fixes_interface, MIN2(version, MESA_WL_FIXES_VERSION));
 #endif
       }
    }
@@ -1541,7 +1547,15 @@ registry_handle_global(void *data, struct wl_registry *registry,
 static void
 registry_handle_global_remove(void *data, struct wl_registry *registry,
                               uint32_t name)
-{ /* No-op */ }
+{
+#ifdef WL_FIXES_ACK_GLOBAL_REMOVE
+   struct wsi_wl_display *display = data;
+
+   if (display->wl_fixes && wl_fixes_get_version(display->wl_fixes) >= WL_FIXES_ACK_GLOBAL_REMOVE_SINCE_VERSION) {
+      wl_fixes_ack_global_remove(display->wl_fixes, registry, name);
+   }
+#endif
+}
 
 static const struct wl_registry_listener registry_listener = {
    registry_handle_global,

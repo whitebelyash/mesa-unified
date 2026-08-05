@@ -651,16 +651,16 @@ intrinsic("masked_swizzle_amd", src_comp=[0], dest_comp=0, bit_sizes=src0,
           indices=[SWIZZLE_MASK, FETCH_INACTIVE],
           flags=SUBGROUP_FLAGS)
 intrinsic("write_invocation_amd", src_comp=[0, 0, 1], dest_comp=0, bit_sizes=src0,
-          flags=[CAN_ELIMINATE])
+          flags=SUBGROUP_FLAGS)
 # src = [ mask, addition ]
 intrinsic("mbcnt_amd", src_comp=[1, 1], dest_comp=1, bit_sizes=[32], flags=[CAN_REORDER, CAN_ELIMINATE])
 # Compiled to v_permlane16_b32. src = [ value, lanesel_lo, lanesel_hi ]
-intrinsic("lane_permute_16_amd", src_comp=[1, 1, 1], dest_comp=1, bit_sizes=src0, flags=[CAN_ELIMINATE])
+intrinsic("lane_permute_16_amd", src_comp=[1, 1, 1], dest_comp=1, bit_sizes=src0, flags=SUBGROUP_FLAGS)
 # subgroup shuffle up/down with cluster size 16.
 # base in [-15, -1]: DPP_ROW_SR
 # base in [  1, 15]: DPP_ROW_SL, otherwise invalid.
 # Returns zero for invocations that try to read out of bounds
-intrinsic("dpp16_shift_amd", src_comp=[0], dest_comp=0, bit_sizes=src0, indices=[BASE], flags=[CAN_ELIMINATE])
+intrinsic("dpp16_shift_amd", src_comp=[0], dest_comp=0, bit_sizes=src0, indices=[BASE], flags=SUBGROUP_FLAGS)
 
 # Basic Geometry Shader intrinsics.
 #

@@ -3537,8 +3537,9 @@ tu6_emit_rast(struct tu_cs *cs,
       .stream = rs->rasterization_stream,
       .discard = rs->rasterizer_discard_enable));
    if (CHIP == A6XX) {
-      tu_cs_emit_regs(cs, VPC_UNKNOWN_9107(CHIP,
-         .raster_discard = rs->rasterizer_discard_enable));
+      tu_cs_emit_regs(cs, PC_RAST_STREAM_CNTL(CHIP,
+         .stream = rs->rasterization_stream,
+         .discard = rs->rasterizer_discard_enable));
    } else {
       if (CHIP == A7XX) {
          tu_cs_emit_regs(cs, VPC_RAST_STREAM_CNTL_V2(CHIP,

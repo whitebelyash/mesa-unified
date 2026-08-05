@@ -35,13 +35,14 @@
 #include "nv30/nv30_state.h"
 #include "nv30/nv30_winsys.h"
 
-static void
+static bool
 nv30_context_kick_notify(struct nouveau_pushbuf *push)
 {
    struct nouveau_pushbuf_priv *p = push->user_priv;
    struct nouveau_screen *screen = p->screen;
 
-   _nouveau_fence_next(p->context);
+   if (!_nouveau_fence_next(p->context))
+      return false;
    _nouveau_fence_update(screen, true);
 
    if (push->bufctx) {
@@ -62,6 +63,8 @@ nv30_context_kick_notify(struct nouveau_pushbuf *push)
          }
       }
    }
+
+   return true;
 }
 
 static void
@@ -258,7 +261,10 @@ nv30_context_create(struct pipe_screen *pscreen, void *priv, unsigned ctxflags)
    }
 
    nouveau_context_init_vdec(&nv30->base);
-   nouveau_fence_new(&nv30->base, &nv30->base.fence);
+   if (!nouveau_fence_new(&nv30->base, &nv30->base.fence)) {
+      nv30_context_destroy(pipe);
+      return NULL;
+   }
 
    return pipe;
 }

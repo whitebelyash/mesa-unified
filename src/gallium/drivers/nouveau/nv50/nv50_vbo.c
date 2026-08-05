@@ -748,10 +748,11 @@ nva0_draw_stream_output(struct nv50_context *nv50,
    } while (--num_instances);
 }
 
-static void
+static bool
 nv50_draw_vbo_kick_notify(struct nouveau_context *context)
 {
    _nouveau_fence_update(context->screen, true);
+   return true;
 }
 
 static void

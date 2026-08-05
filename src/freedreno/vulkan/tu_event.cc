@@ -14,6 +14,12 @@
 #include "tu_cmd_buffer.h"
 #include "tu_rmv.h"
 
+static uint64_t *
+tu_event_map(tu_event *event)
+{
+   return (uint64_t *)tu_suballoc_bo_map(&event->bo);
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL
 tu_CreateEvent(VkDevice _device,
                const VkEventCreateInfo *pCreateInfo,
@@ -33,6 +39,8 @@ tu_CreateEvent(VkDevice _device,
    mtx_unlock(&device->event_mutex);
    if (result != VK_SUCCESS)
       goto fail_alloc;
+
+   *tu_event_map(event) = 0;
 
    TU_RMV(event_create, device, pCreateInfo, event);
 
@@ -62,13 +70,6 @@ tu_DestroyEvent(VkDevice _device,
    tu_suballoc_bo_free(&device->event_suballoc, &event->bo);
    mtx_unlock(&device->event_mutex);
    vk_object_free(&device->vk, pAllocator, event);
-}
-
-
-static uint64_t *
-tu_event_map(tu_event *event)
-{
-   return (uint64_t *)tu_suballoc_bo_map(&event->bo);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL

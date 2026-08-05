@@ -1365,6 +1365,8 @@ zink_screen_init_compiler(struct zink_screen *screen)
    screen->ntv_info.have_workgroup_memory_explicit_layout = screen->info.have_KHR_workgroup_memory_explicit_layout;
    screen->ntv_info.has_demote_to_helper = screen->info.have_EXT_shader_demote_to_helper_invocation;
    screen->ntv_info.broken_arbitary_type_const = screen->driver_compiler_workarounds.broken_const;
+   screen->ntv_info.have_shader_viewport_index_layer = screen->info.have_EXT_shader_viewport_index_layer;
+   screen->ntv_info.have_shader_output_layer = screen->info.feats12.shaderOutputLayer;
    screen->ntv_info.spirv_version = screen->spirv_version;
    if (screen->info.have_KHR_shader_float_controls) {
       if (screen->info.props12.shaderDenormFlushToZeroFloat16)

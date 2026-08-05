@@ -156,10 +156,12 @@ TEST_F(nir_cf_test, lcssa_iter_safety_during_deref_remat)
    nir_convert_loop_to_lcssa(loop);
 
    nir_block *block_after_loop = nir_cf_node_as_block(nir_cf_node_next(&loop->cf_node));
+   nir_block *block_before_loop = nir_cf_node_as_block(nir_cf_node_prev(&loop->cf_node));
 
    EXPECT_FALSE(nir_def_is_unused(index));
+   EXPECT_TRUE(nir_def_block(index) == block_before_loop);
    nir_foreach_use_including_if(src, index)
-      EXPECT_TRUE(!nir_src_is_if(src) && nir_src_use_instr(src)->type == nir_instr_type_phi &&
+      EXPECT_TRUE(!nir_src_is_if(src) && nir_src_use_instr(src)->type == nir_instr_type_deref &&
                   nir_src_use_instr(src)->block == block_after_loop);
 
    nir_validate_shader(b->shader, NULL);

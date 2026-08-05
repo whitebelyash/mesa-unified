@@ -153,7 +153,7 @@ radv_compute_queue_enabled(const struct radv_physical_device *pdev)
           (!(instance->queue_disable_flags & RADV_QUEUE_DISABLE_COMPUTE) || !pdev->info.has_graphics);
 }
 
-static bool
+bool
 radv_graphics_queue_enabled(const struct radv_physical_device *pdev)
 {
    const struct radv_instance *instance = radv_physical_device_instance(pdev);
@@ -1473,7 +1473,7 @@ radv_physical_device_get_features(const struct radv_physical_device *pdev, struc
 
       /* VK_KHR_cooperative_matrix */
       .cooperativeMatrix = radv_cooperative_matrix_enabled(pdev),
-      .cooperativeMatrixRobustBufferAccess = radv_cooperative_matrix_enabled(pdev),
+      .cooperativeMatrixRobustBufferAccess = false,
 
       /* VK_EXT_image_compression_control */
       .imageCompressionControl = radv_compression_control_enabled(pdev),

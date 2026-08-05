@@ -1583,19 +1583,18 @@ gather_outputs(struct nir_builder *builder, nir_intrinsic_instr *intr, void *cb_
 {
    struct linkage_info *linkage = (struct linkage_info *)cb_data;
 
-   /* Track the index of emit_vertex in the same block, so that we can identify
-    * which GS output stores belong to which emit_vertex section in the same
-    * block.
+   if (linkage->gather_outputs_state.last_gs_emit_block != intr->instr.block) {
+      /* Reset the emit index for a new block. */
+      linkage->gather_outputs_state.last_gs_emit_block = intr->instr.block;
+      linkage->gather_outputs_state.gs_emit_index = 0;
+   }
+
+   /* Count emit_vertex within the block, so that we can identify which GS
+    * output stores belong to which emit_vertex section in the same block.
     */
    if (intr->intrinsic == nir_intrinsic_emit_vertex ||
        intr->intrinsic == nir_intrinsic_emit_vertex_with_counter) {
-      if (linkage->gather_outputs_state.last_gs_emit_block ==
-          intr->instr.block) {
-         linkage->gather_outputs_state.gs_emit_index++;
-      } else {
-         linkage->gather_outputs_state.last_gs_emit_block = intr->instr.block;
-         linkage->gather_outputs_state.gs_emit_index = 0;
-      }
+      linkage->gather_outputs_state.gs_emit_index++;
       return false;
    }
 

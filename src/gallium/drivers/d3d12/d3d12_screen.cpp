@@ -350,6 +350,11 @@ d3d12_init_screen_caps(struct d3d12_screen *screen)
    caps->image_store_formatted = true;
    caps->glsl_tess_levels_as_inputs = true;
 
+   /* The VAO fast path gives each attribute its own vertex buffer view starting
+    * at that attribute's offset, leaving a partial trailing stride that AMD's
+    * driver treats as out of bounds (mesa issue #15924). */
+   caps->allow_dynamic_vao_fastpath = screen->vendor_id != HW_VENDOR_AMD;
+
    caps->max_stream_output_buffers = D3D12_SO_BUFFER_SLOT_COUNT;
 
    caps->max_stream_output_separate_components =

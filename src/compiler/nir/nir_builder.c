@@ -678,12 +678,11 @@ nir_type_convert(nir_builder *b,
     */
    if (dst_base == nir_type_bool && src_base != nir_type_bool) {
       nir_op opcode;
-      const unsigned dst_bit_size = nir_alu_type_get_type_size(dest_type);
 
       /* For conversions to backend-specific bit-sizes,
        * please use the appropriate instructions directly.
        */
-      assert(dst_bit_size == 1);
+      assert(nir_alu_type_get_type_size(dest_type) == 1);
 
       if (src_base == nir_type_float) {
          opcode = nir_op_fneu;

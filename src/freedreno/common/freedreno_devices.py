@@ -727,6 +727,7 @@ add_gpus([
     ], A6xxGPUInfo(
         CHIP.A6XX, # NOT a mistake!
         [a6xx_base, a6xx_gen1_low, GPUProps(
+            reg_size_vec4 = 64,
             has_cp_reg_write = False,
             has_gmem_fast_clear = True,
             sysmem_per_ccu_depth_cache_size = 8 * 1024, # ??????
