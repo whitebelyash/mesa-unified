@@ -1413,6 +1413,9 @@ a8xx_gen2 = GPUProps(
 
 add_gpus([
        GPUId(chip_id=0xffff44010000, name="Adreno (TM) 810"),
+       GPUId(chip_id=0xffff44010200, name="Adreno (TM) 812"),
+       GPUId(chip_id=0x44010000, name="Adreno (TM) 810"), # KGSL
+       GPUId(chip_id=0x44010200, name="Adreno (TM) 812"), # KGSL
     ], A6xxGPUInfo(
         CHIP.A8XX,
         [a7xx_base, a7xx_gen3, a8xx_base, a8xx_gen1, GPUProps(
