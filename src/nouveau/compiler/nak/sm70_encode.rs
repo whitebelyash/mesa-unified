@@ -903,10 +903,14 @@ impl SM70Op for OpFMnMx {
             Some(&self.dst),
             Some(&self.srcs[0]),
             Some(&self.srcs[1]),
-            Some(&Src::ZERO),
+            None,
         );
         e.set_pred_src(87..90, 90, &self.min);
         e.set_bit(80, self.ftz);
+
+        // .IS_A (SM90+): Dst predicate will be set if the first source is picked.
+        e.set_bit(65, false);
+        // e.set_pred_dst(66..69, &Dst::None); // dst0
     }
 }
 

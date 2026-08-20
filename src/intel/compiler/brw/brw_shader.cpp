@@ -1022,7 +1022,7 @@ brw_shader_phase_update(brw_shader &s, enum brw_shader_phase phase)
    brw_validate(s);
 }
 
-bool brw_should_print_shader(const nir_shader *shader, uint64_t debug_flag, uint32_t source_hash)
+bool brw_should_print_shader(const nir_shader *shader, uint64_t debug_flag, uint64_t source_hash)
 {
    if (intel_shader_dump_filter && intel_shader_dump_filter != source_hash) {
       return false;

@@ -2243,6 +2243,7 @@ tu6_clear_lrz(struct tu_cmd_buffer *cmd,
     * writing whole cache lines we assume to be 64 bytes.
     */
    tu_emit_event_write<CHIP>(cmd, &cmd->cs, FD_CACHE_CLEAN);
+   tu_cs_emit_wfi(cs);
 
    const unsigned lrz_buffers = CHIP >= A7XX ? 2 : 1;
    for (unsigned i = 0; i < lrz_buffers; i++) {
@@ -3869,12 +3870,6 @@ clear_image_cp_blit(struct tu_cmd_buffer *cmd,
    uint32_t level_count = vk_image_subresource_level_count(&image->vk, range);
    uint32_t layer_count = vk_image_subresource_layer_count(&image->vk, range);
    struct tu_cs *cs = &cmd->cs;
-   enum pipe_format format;
-   if (image->vk.format == VK_FORMAT_E5B9G9R9_UFLOAT_PACK32) {
-      format = PIPE_FORMAT_R32_UINT;
-   } else {
-      format = tu_aspects_to_plane(image->vk.format, aspect_mask);
-   }
 
    if (image->layout[0].depth0 > 1) {
       assert(layer_count == 1);
@@ -3882,11 +3877,24 @@ clear_image_cp_blit(struct tu_cmd_buffer *cmd,
    }
 
    const struct blit_ops *ops = image->layout[0].nr_samples > 1 ? &r3d_ops<CHIP> : &r2d_ops<CHIP>;
+   const bool e5b9g9r9_as_u32 =
+      image->vk.format == VK_FORMAT_E5B9G9R9_UFLOAT_PACK32 &&
+      ops == &r2d_ops<CHIP>;
+
+   enum pipe_format format;
+   if (e5b9g9r9_as_u32) {
+      format = PIPE_FORMAT_R32_UINT;
+   } else {
+      format = tu_aspects_to_plane(image->vk.format, aspect_mask);
+   }
+   if (format == PIPE_FORMAT_R64_SINT || format == PIPE_FORMAT_R64_UINT) {
+      format = PIPE_FORMAT_R32G32_UINT;
+   }
 
    ops->setup(cmd, cs, format, format, aspect_mask, 0, true, image->layout[0].ubwc,
               (VkSampleCountFlagBits) image->layout[0].nr_samples,
               (VkSampleCountFlagBits) image->layout[0].nr_samples);
-   if (image->vk.format == VK_FORMAT_E5B9G9R9_UFLOAT_PACK32)
+   if (e5b9g9r9_as_u32)
       ops->clear_value(cmd, cs, PIPE_FORMAT_R9G9B9E5_FLOAT, clear_value);
    else
       ops->clear_value(cmd, cs, format, clear_value);

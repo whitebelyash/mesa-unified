@@ -3470,10 +3470,20 @@ genX(flush_descriptor_buffers)(struct anv_cmd_buffer *cmd_buffer,
    struct anv_push_constants *push_constants =
       &pipe_state->push_constants;
    if (cmd_buffer->state.current_db_mode == ANV_CMD_DESCRIPTOR_BUFFER_MODE_HEAP) {
-      /* TODO handle non 4k aligned offsets */
+#if GFX_VERx10 < 125
+      struct anv_device *device = cmd_buffer->device;
+      push_constants->desc_surface_offsets[0] =
+         cmd_buffer->state.descriptor_buffers.surfaces_address % 4096;
+      push_constants->surfaces_base_offset =
+         ROUND_DOWN_TO(
+            cmd_buffer->state.descriptor_buffers.surfaces_address,
+            4096) -
+         anv_physical_device_get_dynamic_visible_pool_va(device->physical)->addr;
+#else
       push_constants->desc_surface_offsets[0] =
          cmd_buffer->state.descriptor_buffers.surfaces_address -
          cmd_buffer->device->physical->va.dynamic_visible_pool.addr;
+#endif
       push_constants->desc_surface_offsets[1] =
          cmd_buffer->state.descriptor_buffers.samplers_address -
          anv_physical_device_get_dynamic_state_pool_va(cmd_buffer->device->physical)->addr;
@@ -4156,6 +4166,35 @@ end_command_buffer(struct anv_cmd_buffer *cmd_buffer,
       genX(cmd_buffer_apply_pipe_flushes)(cmd_buffer);
       anv_cmd_buffer_end_batch_buffer(cmd_buffer);
       return VK_SUCCESS;
+   }
+
+   /* Flush L1/L2 caches before ending the command buffer. Some applications
+    * like Llama.cpp seems to rely on this.
+    *
+    * The kernel driver should insert flushes at the end of the command buffer
+    * as well so it's a bit repetitive. Xe actually flushes the HDC (L2 data
+    * cache) but not the untyped cache (L1 data cache). There is a requirement
+    * in the documentation flush L1 if L2 is flushed too, so sounds like a bit
+    * of a kernel driver bug.
+    */
+   if (cmd_buffer->vk.level == VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
+      if (anv_cmd_buffer_is_render_queue(cmd_buffer)) {
+         anv_add_pending_pipe_bits(cmd_buffer,
+                                   VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                                   VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                                   ANV_PIPE_DEPTH_CACHE_FLUSH_BIT |
+                                   ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT,
+                                   "end render command buffer L1/L2 flush");
+      }
+      if (anv_cmd_buffer_is_render_or_compute_queue(cmd_buffer)) {
+         anv_add_pending_pipe_bits(cmd_buffer,
+                                   VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT |
+                                   VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                                   VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                                   ANV_PIPE_HDC_PIPELINE_FLUSH_BIT |
+                                   ANV_PIPE_UNTYPED_DATAPORT_CACHE_FLUSH_BIT,
+                                   "end render command buffer L1/L2 flush");
+      }
    }
 
    /* Flush any in-progress CCS/MCS operations in preparation for chaining. */
@@ -7236,7 +7275,7 @@ void genX(CmdWaitEvents2)(
       cmd_buffer_accumulate_barrier_bits(cmd_buffer, 1, &pDependencyInfos[i],
                                          &src_stages, &dst_stages, &bits);
 
-      if ((pDependencyInfos->dependencyFlags & VK_DEPENDENCY_ASYMMETRIC_EVENT_BIT_KHR) == 0) {
+      if ((pDependencyInfos[i].dependencyFlags & VK_DEPENDENCY_ASYMMETRIC_EVENT_BIT_KHR) == 0) {
          /* Only consider the invalidate bits, the signal part will do the
           * flushing.
           *

@@ -40,8 +40,6 @@ enum fd_lrz_direction {
    FD_LRZ_GREATER,
 };
 
-#define FD_BIND_GLOBAL_BUFFER         (1 << 31)
-
 /**
  * State related to batch/resource tracking.
  *

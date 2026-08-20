@@ -1371,6 +1371,7 @@ vn_physical_device_get_passthrough_extensions(
       .EXT_transform_feedback = true,
       .EXT_vertex_attribute_divisor = true,
       .EXT_vertex_input_dynamic_state = true,
+      .EXT_ycbcr_image_arrays = true,
 
       /* vendor */
       .ARM_rasterization_order_attachment_access = true,

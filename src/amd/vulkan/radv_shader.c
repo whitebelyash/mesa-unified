@@ -282,7 +282,11 @@ radv_optimize_nir_algebraic_early(nir_shader *nir)
 void
 radv_optimize_nir_algebraic_late(nir_shader *nir)
 {
-   NIR_PASS(_, nir, nir_opt_reassociate_for_fma);
+   /* Invariant position doesn't cover generic VS outputs used
+    * to compute position in later stages.
+    */
+   if (nir->info.stage != MESA_SHADER_VERTEX || nir->info.next_stage == MESA_SHADER_FRAGMENT)
+      NIR_PASS(_, nir, nir_opt_reassociate_for_fma);
 
    /* Do late algebraic optimization to turn add(a,
     * neg(b)) back into subs, then the mandatory cleanup

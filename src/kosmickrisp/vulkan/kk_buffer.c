@@ -155,17 +155,20 @@ kk_bind_buffer_memory(struct kk_device *dev, const VkBindBufferMemoryInfo *info)
    VK_FROM_HANDLE(kk_device_memory, mem, info->memory);
    VK_FROM_HANDLE(kk_buffer, buffer, info->buffer);
 
-   if (mem->bo->mtl_handle)
+   if (mem->bo->mtl_handle) {
       buffer->mtl_handle = mtl_new_buffer_with_length(
          mem->bo->mtl_handle, buffer->vk.size, info->memoryOffset);
-   else {
+      buffer->offset = 0u;
+   } else {
       /* If the memory is not heap backed, for example if we imported a host
        * pointer, use the mapped buffer directly and retain a reference */
       buffer->mtl_handle = mem->bo->map;
+      buffer->offset = info->memoryOffset;
       mtl_retain(buffer->mtl_handle);
    }
 
-   buffer->vk.device_address = mtl_buffer_get_gpu_address(buffer->mtl_handle);
+   buffer->vk.device_address =
+      mtl_buffer_get_gpu_address(buffer->mtl_handle) + buffer->offset;
    /* We need Metal to give us a CPU mapping so it correctly captures the
     * data in the GPU debugger... */
    mtl_get_contents(buffer->mtl_handle);

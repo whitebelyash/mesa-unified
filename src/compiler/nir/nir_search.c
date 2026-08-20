@@ -648,7 +648,6 @@ nir_replace_instr(nir_builder *build, nir_alu_instr *instr,
                   struct exec_list *dead_instrs)
 {
    struct match_state state;
-   state.fp_math_ctrl = nir_fp_fast_math;
    state.state = search_state;
    state.pass_op_table = table->pass_op_table;
    state.table = table;
@@ -664,6 +663,7 @@ nir_replace_instr(nir_builder *build, nir_alu_instr *instr,
        * binary.
        */
       state.comm_op_direction = comb;
+      state.fp_math_ctrl = nir_fp_fast_math;
       state.variables_seen = 0;
 
       if (match_expression(table, search, instr,

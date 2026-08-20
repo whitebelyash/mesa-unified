@@ -452,7 +452,7 @@ void si_nir_gather_info(struct si_screen *sscreen, struct nir_shader *nir,
       }
    }
 
-   if (sscreen->debug_flags & DBG(USE_LLVM)) {
+   if (sscreen->shader_debug_flags & DBG(USE_LLVM)) {
       nir->info.use_aco_amd = false;
    } else {
       nir->info.use_aco_amd = aco_is_gpu_supported(&sscreen->info) &&

@@ -479,6 +479,10 @@ impl Dst {
             Dst::Reg(reg) => Some(reg.file()),
         }
     }
+
+    pub fn is_carry(&self) -> bool {
+        self.file() == Some(RegFile::Carry)
+    }
 }
 
 impl From<RegRef> for Dst {

@@ -320,9 +320,11 @@ prepare_vs_driver_set(struct panvk_cmd_buffer *cmdbuf, uint32_t repeat_count)
             emit_vs_attrib(cmdbuf, i, vb_offset,
                            (struct mali_attribute_packed *)(&descs[i]));
          } else {
-            /* Write a NullDescriptor and rely on OOB behavior */
-            pan_cast_and_pack(&descs[i], NULL_DESCRIPTOR, cfg)
-               ;
+            /* Write a specialized AttributeDescriptor and rely on OOB behavior */
+            pan_cast_and_pack(&descs[i], ATTRIBUTE, cfg) {
+               cfg.table = 17; /* Invalid table, ensuring OOB access */
+               cfg.format = (MALI_R16F << 12) | MALI_RGB_COMPONENT_ORDER_RGBA;
+            }
          }
       }
 

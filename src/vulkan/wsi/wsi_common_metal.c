@@ -881,7 +881,7 @@ wsi_metal_create_mem(const struct wsi_swapchain *chain,
       .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
       .pNext = &image_mem_dedicated_info,
       .allocationSize = requirements.size,
-      .memoryTypeIndex = requirements.memoryTypeBits,
+      .memoryTypeIndex = wsi_select_device_memory_type(wsi, requirements.memoryTypeBits),
    };
 
    return wsi->AllocateMemory(chain->device, &image_mem_info,

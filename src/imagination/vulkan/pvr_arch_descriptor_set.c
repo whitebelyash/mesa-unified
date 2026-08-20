@@ -109,10 +109,13 @@ write_image_sampler(const struct pvr_descriptor_set *set,
 
    struct pvr_combined_image_sampler_descriptor image_sampler_desc = { 0 };
 
-   VK_FROM_HANDLE(pvr_sampler, info_sampler, image_info->sampler);
-   struct pvr_sampler *sampler = binding->immutable_sampler_count
-                                    ? binding->immutable_samplers[elem]
-                                    : info_sampler;
+   struct pvr_sampler *sampler;
+   if (binding->immutable_sampler_count) {
+      sampler = binding->immutable_samplers[elem];
+   } else {
+      VK_FROM_HANDLE(pvr_sampler, info_sampler, image_info->sampler);
+      sampler = info_sampler;
+   }
 
    image_sampler_desc.sampler = sampler->descriptor;
 

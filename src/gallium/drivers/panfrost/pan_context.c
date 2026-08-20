@@ -251,14 +251,15 @@ panfrost_set_shader_images(struct pipe_context *pctx,
    struct panfrost_context *ctx = pan_context(pctx);
    ctx->dirty_shader[shader] |= PAN_DIRTY_STAGE_IMAGE;
 
-   /* Unbind start_slot...start_slot+count */
+   /* Unbind start_slot...start_slot+count+unbind_num_trailing_slots */
    if (!iviews) {
       for (int i = start_slot;
            i < start_slot + count + unbind_num_trailing_slots; i++) {
          pipe_resource_reference(&ctx->images[shader][i].resource, NULL);
       }
 
-      ctx->image_mask[shader] &= ~(BITFIELD64_MASK(count) << start_slot);
+      ctx->image_mask[shader] &=
+         ~BITFIELD64_RANGE(start_slot, count + unbind_num_trailing_slots);
       return;
    }
 

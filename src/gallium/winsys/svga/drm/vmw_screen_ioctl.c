@@ -41,16 +41,6 @@
 #define SVGA3D_FLAGS_LOWER_32(svga3d_flags) \
    (svga3d_flags & ((uint64_t)UINT32_MAX))
 
-struct vmw_region
-{
-   uint32_t handle;
-   uint64_t map_handle;
-   void *data;
-   uint32_t map_count;
-   int drm_fd;
-   uint32_t size;
-};
-
 uint32_t
 vmw_region_size(struct vmw_region *region)
 {
@@ -964,6 +954,13 @@ vmw_ioctl_parse_caps(struct vmw_winsys_screen *vws,
    return 0;
 }
 
+static inline bool
+vmw_ioctl_have_version(drmVersionPtr version, int major, int minor)
+{
+   return version->version_major > major ||
+      (version->version_major == major && version->version_minor >= minor);
+}
+
 bool
 vmw_ioctl_init(struct vmw_winsys_screen *vws)
 {
@@ -983,24 +980,16 @@ vmw_ioctl_init(struct vmw_winsys_screen *vws)
    if (!version)
       goto out_no_version;
 
-   have_drm_2_5 = version->version_major > 2 ||
-      (version->version_major == 2 && version->version_minor > 4);
-   vws->ioctl.have_drm_2_6 = version->version_major > 2 ||
-      (version->version_major == 2 && version->version_minor > 5);
-   vws->ioctl.have_drm_2_9 = version->version_major > 2 ||
-      (version->version_major == 2 && version->version_minor > 8);
-   vws->ioctl.have_drm_2_15 = version->version_major > 2 ||
-      (version->version_major == 2 && version->version_minor > 14);
-   vws->ioctl.have_drm_2_16 = version->version_major > 2 ||
-      (version->version_major == 2 && version->version_minor > 15);
-   vws->ioctl.have_drm_2_17 = version->version_major > 2 ||
-      (version->version_major == 2 && version->version_minor > 16);
-   vws->ioctl.have_drm_2_18 = version->version_major > 2 ||
-      (version->version_major == 2 && version->version_minor > 17);
-   vws->ioctl.have_drm_2_19 = version->version_major > 2 ||
-      (version->version_major == 2 && version->version_minor > 18);
-   vws->ioctl.have_drm_2_20 = version->version_major > 2 ||
-      (version->version_major == 2 && version->version_minor > 19);
+   have_drm_2_5 = vmw_ioctl_have_version(version, 2, 5);
+   vws->ioctl.have_drm_2_6 = vmw_ioctl_have_version(version, 2, 6);
+   vws->ioctl.have_drm_2_9 = vmw_ioctl_have_version(version, 2, 9);
+   vws->ioctl.have_drm_2_15 = vmw_ioctl_have_version(version, 2, 15);
+   vws->ioctl.have_drm_2_16 = vmw_ioctl_have_version(version, 2, 16);
+   vws->ioctl.have_drm_2_17 = vmw_ioctl_have_version(version, 2, 17);
+   vws->ioctl.have_drm_2_18 = vmw_ioctl_have_version(version, 2, 18);
+   vws->ioctl.have_drm_2_19 = vmw_ioctl_have_version(version, 2, 19);
+   vws->ioctl.have_drm_2_20 = vmw_ioctl_have_version(version, 2, 20);
+   vws->ioctl.have_drm_2_21 = vmw_ioctl_have_version(version, 2, 21);
 
    vws->ioctl.drm_execbuf_version = vws->ioctl.have_drm_2_9 ? 2 : 1;
 

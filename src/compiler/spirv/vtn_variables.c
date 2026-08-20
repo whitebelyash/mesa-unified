@@ -1729,6 +1729,7 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
             vtn_var->var->members[member].location = location;
       }
 
+      vtn_var->var->data.explicit_location = true;
       return;
    } else {
       if (vtn_var->var) {

@@ -707,8 +707,12 @@ v3d_update_compiled_fs(struct v3d_context *v3d, uint8_t prim_mode)
         if (key->is_points) {
                 key->point_sprite_mask =
                         v3d->rasterizer->base.sprite_coord_enable;
-                /* this is handled by lower_wpos_pntc */
-                key->point_coord_upper_left = false;
+                /* For PNTC this is handled by lower_wpos_pntc, but varyings
+                 * replaced through GL_COORD_REPLACE need the compiler to do
+                 * the flip.*/
+                key->point_coord_upper_left =
+                        (v3d->rasterizer->base.sprite_coord_mode ==
+                         PIPE_SPRITE_COORD_UPPER_LEFT);
         }
 
         struct v3d_compiled_shader *old_fs = v3d->prog.fs;

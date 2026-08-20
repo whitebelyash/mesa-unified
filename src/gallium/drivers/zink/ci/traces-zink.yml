@@ -11,9 +11,9 @@ traces:
     gl-zink-anv-tgl:
       checksum: 9dc55abb7806f0116770a5a1a389c342
     zink-radv-vangogh:
-      checksum: 6bff1b79451bae925314952a8e5303cf
+      checksum: 06fab4fbf6c48a03771524785af94469
     zink-radv-gfx1201:
-      checksum: 6bff1b79451bae925314952a8e5303cf
+      checksum: 06fab4fbf6c48a03771524785af94469
 
   behdad-glyphy/glyphy-v2.trace:
     gl-zink-anv-adl:
@@ -273,9 +273,9 @@ traces:
     gl-zink-anv-tgl:
       checksum: b36c25e52624cbf8dab73b6acecb8e84
     zink-radv-vangogh:
-      checksum: 300b70c951f44e6d321a97626ca52b8a
+      checksum: efafc2996298a0c3f91a8dd0a718b32d
     zink-radv-gfx1201:
-      checksum: 300b70c951f44e6d321a97626ca52b8a
+      checksum: efafc2996298a0c3f91a8dd0a718b32d
 
   pathfinder/demo-v2.trace:
     gl-zink-anv-adl:
@@ -436,7 +436,7 @@ traces:
     gl-zink-anv-tgl:
       checksum: 54149c9a6560176436600bfe8fe2ae1f
     zink-radv-vangogh:
-      checksum: 051011af02dd7972f55db7d01d38a200
+      checksum: 9288cc3f5ef6ba6e45e85ef29aaea259
     zink-radv-gfx1201:
       checksum: 94e49e3e92171c6a1cb2a2ba3ef8c023
 

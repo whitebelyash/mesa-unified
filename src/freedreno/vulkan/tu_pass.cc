@@ -358,7 +358,7 @@ tu_render_pass_add_implicit_deps(struct tu_render_pass *pass,
 
             if ((att[a].finalLayout != subpass->pDepthStencilAttachment->layout ||
                 stencil_final_layout != stencil_layout) &&
-                !att_used[a] && !has_external_src[i])
+                !att_used[a] && !has_external_dst[i])
                dst_implicit_dep = true;
             att_used[a] = true;
       }

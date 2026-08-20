@@ -82,6 +82,9 @@ radv_pad_cmdbuf(const struct radv_device *device, uint32_t size, enum amd_ip_typ
    const struct radv_physical_device *pdev = radv_device_physical(device);
    const uint32_t ib_alignment = (pdev->info.ip[ip_type].ib_pad_dw_mask + 1) * 4;
 
+   if (!ib_alignment)
+      return 0;
+
    return align(size, ib_alignment);
 }
 
@@ -90,6 +93,9 @@ radv_align_cmdbuf(const struct radv_device *device, uint32_t size, enum amd_ip_t
 {
    const struct radv_physical_device *pdev = radv_device_physical(device);
    const uint32_t ib_alignment = pdev->info.ip[ip_type].ib_alignment;
+
+   if (!ib_alignment)
+      return 0;
 
    return align(size, ib_alignment);
 }

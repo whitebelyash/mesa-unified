@@ -3644,8 +3644,8 @@ v3dv_GetPipelineExecutableStatisticsKHR(
          .instrs = qpu_inst_count,
          .thread_count = prog_data->threads,
          .spill_size = prog_data->spill_size,
-         .spills = prog_data->spill_size,
-         .fills = prog_data->spill_size,
+         .spills = prog_data->tmu_spills,
+         .fills = prog_data->tmu_fills,
          .read_stalls = prog_data->qpu_read_stalls,
       };
 

@@ -1699,7 +1699,7 @@ impl Image {
 
         // the result is linear without any gaps because it's a plain buffer.
         let dst_pitch = [bpp, bpp * region[0], bpp * region[0] * region[1]];
-        let mut dst_origin: CLVec<usize> = [dst_offset, 0, 0].into();
+        let dst_origin: CLVec<usize> = [dst_offset, 0, 0].into();
 
         // if the parent object of this image is a buffer, we can simply do a rect copy between
         // buffers here while taking the bpp into account.
@@ -1708,7 +1708,6 @@ impl Image {
 
             region[0] *= bpp;
             src_origin[0] *= bpp;
-            dst_origin[0] *= bpp;
 
             return buffer.copy_rect(
                 dst,
@@ -1742,7 +1741,8 @@ impl Image {
         )?;
 
         let src_pitch = [1, tx_src.row_pitch() as usize, tx_src.slice_pitch()];
-        let (offset, size) = CLVec::calc_offset_size(dst_origin, region, dst_pitch);
+        let offset = dst_offset;
+        let size = CLVec::calc_size(region, dst_pitch);
         let tx_dst = dst.tx(ctx, offset, size, RWFlags::WR)?;
 
         // Those pitch values cannot have 0 value in its coordinates

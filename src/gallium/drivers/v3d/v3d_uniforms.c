@@ -339,9 +339,13 @@ v3d_write_uniforms(struct v3d_context *v3d, struct v3d_job *job,
                 }
 
                 case QUNIFORM_GET_UBO_SIZE: {
-                        uint32_t unit = v3d_unit_data_get_unit(data);
+                        /* Unlike QUNIFORM_UBO_ADDR, `data` here is the plain
+                         * NIR UBO index, not a v3d_unit_data. Also, Gallium
+                         * binds UBO `i` at constant buffer slot `1 + i`,
+                         * reserving slot 0 for the default uniform block.
+                         */
                         cl_aligned_u32(&uniforms,
-                                       cb->cb[unit].buffer_size);
+                                       cb->cb[data + 1].buffer_size);
                         break;
                 }
 

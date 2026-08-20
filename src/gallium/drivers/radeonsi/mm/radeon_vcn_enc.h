@@ -104,6 +104,7 @@ struct radeon_enc_pic {
    rvcn_enc_quality_modes_t quality_modes;
 
    bool use_rc_per_pic_ex;
+   bool hevc_per_slice_loop_filter;
    bool av1_tile_splitting_legacy_flag;
    bool av1_unidir_rc_available;
 

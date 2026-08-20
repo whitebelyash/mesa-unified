@@ -344,6 +344,10 @@ emit_load(isel_context* ctx, Builder& bld, const LoadEmitInfo& info,
       new_info.offset = Operand(as_temp(bld, offset));
       new_info.const_offset = reduced_const_offset;
 
+      /* If we split the load, prevent the callback from writing to dst directly */
+      if (num_vals)
+         new_info.dst = Temp();
+
       unsigned align = align_offset ? 1 << (ffs(align_offset) - 1) : align_mul;
 
       Temp val = params.callback(bld, new_info, bytes_needed, align);

@@ -272,7 +272,7 @@ static bool enable_mesh_shader(struct si_screen *sscreen)
       !(sscreen->info.userq_ip_mask & BITFIELD_BIT(AMD_IP_GFX)) &&
       /* don't support LLVM */
       aco_is_gpu_supported(&sscreen->info) &&
-      !(sscreen->debug_flags & DBG(USE_LLVM));
+      !(sscreen->shader_debug_flags & DBG(USE_LLVM));
 }
 
 static bool si_alu_to_scalar_packed_math_filter(const nir_instr *instr, const void *data)

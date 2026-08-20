@@ -1179,7 +1179,10 @@ lower_lsc_memory_logical_send(const brw_builder &bld, brw_mem_inst *mem)
 
    brw_reg payload = addr;
 
-   if (addr.file != VGRF || !addr.is_contiguous()) {
+   /* Note a scalar address needs to be de-scalarized for the lowering
+    * to operate correctly.
+    */
+   if (addr.file != VGRF || !addr.is_contiguous() || addr.is_scalar) {
       if (mem->force_writemask_all) {
          const brw_builder dbld =
             mem->exec_size == 1 ?
