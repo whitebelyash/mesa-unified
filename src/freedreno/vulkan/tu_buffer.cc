@@ -213,15 +213,24 @@ tu_BindBufferMemory2(VkDevice device,
          tu_perfetto_log_bind_buffer(dev, buffer);
 #endif
          buffer->bo_size = mem->bo->size;
+
+         /* BUG FIX (2026-08-26): these were previously unconditional below,
+          * dereferencing buffer->bo even when it was just set to NULL in the
+          * else branch. memory == VK_NULL_HANDLE is a real, reachable case
+          * here -- VK_KHR_maintenance5 (unconditionally supported, see
+          * tu_device.cc) explicitly allows chaining VkBindMemoryStatusKHR
+          * with a NULL memory handle to query bind status without actually
+          * binding, which is exactly what the `if (status)` check above
+          * handles. There's nothing to report/track when there's no real
+          * binding. */
+         TU_RMV(buffer_bind, dev, buffer);
+
+         vk_address_binding_report(&instance->vk, &buffer->vk.base,
+                                   buffer->bo->iova, buffer->bo->size,
+                                   VK_DEVICE_ADDRESS_BINDING_TYPE_BIND_EXT);
       } else {
          buffer->bo = NULL;
       }
-
-      TU_RMV(buffer_bind, dev, buffer);
-
-      vk_address_binding_report(&instance->vk, &buffer->vk.base,
-                                buffer->bo->iova, buffer->bo->size,
-                                VK_DEVICE_ADDRESS_BINDING_TYPE_BIND_EXT);
    }
    return VK_SUCCESS;
 }

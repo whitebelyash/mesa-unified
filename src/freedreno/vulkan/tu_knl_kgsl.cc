@@ -1686,6 +1686,12 @@ fail_submit:
       mtx_unlock(&queue->device->kgsl_profiling_mutex);
    }
 
+   /* BUG FIX (2026-08-25): objs was allocated above (for the profiling
+    * command-object list) and never freed, leaking it on every single
+    * vkQueueSubmit -- i.e. at least once per frame in any real
+    * application on this KGSL/Android backend. */
+   vk_free(&queue->device->vk.alloc, objs);
+
    return result;
 }
 

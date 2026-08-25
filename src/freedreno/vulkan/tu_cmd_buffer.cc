@@ -1298,8 +1298,13 @@ tu6_update_msaa(struct tu_cmd_buffer *cmd)
    tu6_emit_msaa<CHIP>(&cmd->draw_cs, samples, cmd->state.msaa_disable);
 }
 
+/* Returns true if cmd->state.msaa_disable changed, i.e. if the caller still
+ * needs to emit the MSAA registers itself (tu6_update_msaa()). This avoids
+ * emitting them twice back-to-back when the caller is also going to
+ * unconditionally re-emit them anyway (e.g. on TU_CMD_DIRTY_DRAW_STATE).
+ */
 template <chip CHIP>
-static void
+static bool
 tu6_update_msaa_disable(struct tu_cmd_buffer *cmd)
 {
    VkPrimitiveTopology topology =
@@ -1318,8 +1323,9 @@ tu6_update_msaa_disable(struct tu_cmd_buffer *cmd)
 
    if (cmd->state.msaa_disable != msaa_disable) {
       cmd->state.msaa_disable = msaa_disable;
-      tu6_update_msaa<CHIP>(cmd);
+      return true;
    }
+   return false;
 }
 
 static const struct tu_vsc_config *
@@ -8582,6 +8588,7 @@ tu6_draw_common(struct tu_cmd_buffer *cmd,
    if (dirty & TU_CMD_DIRTY_DESC_SETS)
       tu6_emit_descriptor_sets<CHIP>(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS);
 
+   bool msaa_disable_changed = false;
    if (BITSET_TEST(cmd->vk.dynamic_graphics_state.dirty,
                    MESA_VK_DYNAMIC_MS_RASTERIZATION_SAMPLES) ||
        BITSET_TEST(cmd->vk.dynamic_graphics_state.dirty,
@@ -8590,12 +8597,17 @@ tu6_draw_common(struct tu_cmd_buffer *cmd,
                    MESA_VK_DYNAMIC_RS_LINE_MODE) ||
        (cmd->state.dirty & TU_CMD_DIRTY_TES) ||
        (cmd->state.dirty & TU_CMD_DIRTY_DRAW_STATE)) {
-      tu6_update_msaa_disable<CHIP>(cmd);
+      msaa_disable_changed = tu6_update_msaa_disable<CHIP>(cmd);
    }
 
+   /* msaa_disable_changed is included here (rather than emitting from
+    * within tu6_update_msaa_disable()) to avoid emitting the MSAA
+    * registers twice back-to-back when TU_CMD_DIRTY_DRAW_STATE/
+    * MS_RASTERIZATION_SAMPLES is *also* set on the same draw. */
    if (BITSET_TEST(cmd->vk.dynamic_graphics_state.dirty,
                    MESA_VK_DYNAMIC_MS_RASTERIZATION_SAMPLES) ||
-       (cmd->state.dirty & TU_CMD_DIRTY_DRAW_STATE)) {
+       (cmd->state.dirty & TU_CMD_DIRTY_DRAW_STATE) ||
+       msaa_disable_changed) {
       tu6_update_msaa<CHIP>(cmd);
    }
 

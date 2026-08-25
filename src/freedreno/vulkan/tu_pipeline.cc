@@ -1747,7 +1747,11 @@ tu_pipeline_builder_compile_shaders(struct tu_pipeline_builder *builder,
    const bool is_a810 = chip_id == 0x44010000ull;
    const bool is_a825 = chip_id == 0x44030000ull;
    const bool is_a829 = chip_id == 0x44030A20ull;
-   const bool is_a830 = chip_id == 0xffff44050000 || 0x44050001;
+   /* BUG FIX (2026-08-25): operator-precedence bug -- `== A || B` parses as
+    * `(chip_id == A) || (bool)B`, and B here was a nonzero literal, so this
+    * was unconditionally true for every GPU, not just A830. Turned the
+    * intended workaround (see is_target_gpu below) into a universal one. */
+   const bool is_a830 = chip_id == 0xffff44050000 || chip_id == 0x44050001;
    const bool is_target_gpu = is_a810 || is_a825 || is_a829 || is_a830;
 
    const bool executable_info =
@@ -4562,16 +4566,26 @@ tu_pipeline_builder_build(struct tu_pipeline_builder *builder,
 
    result = tu_pipeline_allocate_cs(builder->device, *pipeline,
                                     &builder->layout, builder, NULL);
-
+   /* BUG FIX (2026-08-26): tu_pipeline_allocate_cs() always attempts a real
+    * allocation (set_combined_state() below only affects its requested
+    * size, not whether it allocates at all), so its result must always be
+    * checked -- previously this check was nested inside the
+    * set_combined_state() branch below, silently discarding a genuine OOM
+    * failure whenever that predicate was false (e.g. building a
+    * VK_EXT_graphics_pipeline_library partial pipeline that doesn't combine
+    * these two stages). That let execution continue using a pipeline->cs
+    * that was never successfully allocated. This also uses tu_pipeline_finish()
+    * (not just vk_object_free()) since shaders were already compiled/attached
+    * to *pipeline above by this point. */
+   if (result != VK_SUCCESS) {
+      tu_pipeline_finish(*pipeline, builder->device, builder->alloc);
+      vk_object_free(&builder->device->vk, builder->alloc, *pipeline);
+      return result;
+   }
 
    if (set_combined_state(builder, *pipeline,
                           VK_GRAPHICS_PIPELINE_LIBRARY_PRE_RASTERIZATION_SHADERS_BIT_EXT |
                           VK_GRAPHICS_PIPELINE_LIBRARY_FRAGMENT_SHADER_BIT_EXT)) {
-      if (result != VK_SUCCESS) {
-         vk_object_free(&builder->device->vk, builder->alloc, *pipeline);
-         return result;
-      }
-
       tu_emit_program_state<CHIP>(&(*pipeline)->cs, &(*pipeline)->program,
                                   (*pipeline)->shaders);
 
@@ -4610,7 +4624,14 @@ tu_pipeline_builder_build(struct tu_pipeline_builder *builder,
                                                VK_SYSTEM_ALLOCATION_SCOPE_OBJECT,
                                                &library->state_data);
       if (result != VK_SUCCESS) {
+         /* BUG FIX (2026-08-26): was missing the vk_object_free() that every
+          * other tu_pipeline_finish() error path in this function pairs it
+          * with (see above) -- tu_pipeline_finish() only tears down the
+          * pipeline's internal contents, not the vk_object_zalloc()'d
+          * tu_graphics_lib_pipeline struct itself, so this leaked the outer
+          * object on every vk_graphics_pipeline_state_copy() OOM failure. */
          tu_pipeline_finish(*pipeline, builder->device, builder->alloc);
+         vk_object_free(&builder->device->vk, builder->alloc, *pipeline);
          return result;
       }
    } else {

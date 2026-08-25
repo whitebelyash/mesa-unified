@@ -3345,7 +3345,14 @@ tu_shader_deserialize(struct vk_pipeline_cache *cache,
 
    VkResult result = tu_upload_shader(dev, shader);
    if (result != VK_SUCCESS) {
-      vk_free(&dev->vk.alloc, shader);
+      /* BUG FIX (2026-08-26): shader->variant (and safe_const_variant) are
+       * already set at this point (see ir3_retrieve_variant() above), and
+       * are separately ralloc-allocated (mem_ctx=NULL, i.e. their own root
+       * context) -- a raw vk_free() here only frees the outer tu_shader
+       * struct and leaks the whole ir3_shader_variant tree. Use the proper
+       * destructor, which handles a partially-initialized shader safely
+       * since tu_shader_init() zero-initialized everything. */
+      tu_shader_destroy(dev, shader);
       return NULL;
    }
 
@@ -3669,7 +3676,10 @@ tu_shader_create(struct tu_device *dev,
 
    VkResult result = tu_upload_shader(dev, shader);
    if (result != VK_SUCCESS) {
-      vk_free(&dev->vk.alloc, shader);
+      /* BUG FIX (2026-08-26): see the identical fix a bit above in
+       * tu_shader_deserialize() -- shader->variant is already set here too,
+       * so this needs the proper destructor, not a raw vk_free(). */
+      tu_shader_destroy(dev, shader);
       return result;
    }
 

@@ -114,11 +114,22 @@ tu_suballoc_bo_free(struct tu_suballocator *suballoc, struct tu_suballoc_bo *bo)
     */
    if (p_atomic_read(&bo->bo->refcnt) == 1 && !suballoc->cached_bo) {
       suballoc->cached_bo = bo->bo;
+      /* HARDENING FIX (2026-08-25): bo->bo used to be left dangling here
+       * after ownership moved to suballoc->cached_bo. Every current caller
+       * happens to never touch/re-free `bo` again after this (destructor,
+       * or a raw vk_free of the whole containing struct), so this wasn't
+       * an active bug, but a future caller that *did* call
+       * tu_suballoc_bo_free() twice on the same tu_suballoc_bo (e.g. an
+       * error path that both cleans up locally and then calls a _destroy()
+       * that cleans up again) would double-free/refcount the BO, since the
+       * `if (!bo->bo) return;` guard above can't catch it. */
+      bo->bo = NULL;
       return;
    }
 
    /* Otherwise, drop the refcount on it normally. */
    tu_bo_finish(suballoc->dev, bo->bo);
+   bo->bo = NULL;
 }
 
 void *

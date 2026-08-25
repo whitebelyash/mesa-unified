@@ -301,7 +301,15 @@ tu_query_pool_destroy(struct tu_device *device, struct tu_query_pool *pool,
          if (perf_query->data[i].pass == 0)
             fd_perfcntr_release(device->perfcntrs, perf_query->data[i].counter);
       }
-   } else if (is_perf_query_raw(pool)) {
+   } else if (is_perf_query_derived(pool)) {
+      /* BUG FIX (2026-08-26): was `is_perf_query_raw(pool)` again -- copy-paste
+       * from the branch above. Since the first `if` already required
+       * !is_perf_query_raw(pool) to fall through here, that condition could
+       * never be true, so this branch was dead code: derived-type performance
+       * query pools never released their reserved HW perf counters back to
+       * the shared pool on destroy, leaking a scarce hardware resource on
+       * every vkDestroyQueryPool for VK_QUERY_TYPE_PERFORMANCE_QUERY_KHR
+       * (the non-TU_DEBUG(PERFCRAW) / production path). */
       struct tu_perf_query_derived *perf_query = &pool->perf_query.derived;
       struct fd_derived_counter_collection *collection = perf_query->collection;
 
