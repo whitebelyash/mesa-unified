@@ -2584,6 +2584,13 @@ label_instruction(opt_ctx& ctx, aco_ptr<Instruction>& instr)
           * MUBUF accesses. */
          bool vaddr_prevent_overflow = swizzled && ctx.program->gfx_level < GFX9;
 
+         /* Bounds checking is different on GFX6-7:
+          * The constant offset that is encoded in the instruction
+          * is counted in the bounds checking, but the SGPR offset isn't.
+          * Keep using an SGPR even if it's constant.
+          */
+         bool keep_soffset = mubuf.idxen && ctx.program->gfx_level <= GFX7;
+
          uint32_t const_max = ctx.program->dev.buf_offset_max;
 
          if (mubuf.offen && mubuf.idxen && i == 1 &&
@@ -2603,7 +2610,8 @@ label_instruction(opt_ctx& ctx, aco_ptr<Instruction>& instr)
             mubuf.offset += info.val;
             mubuf.offen = false;
             continue;
-         } else if (i == 2 && info.is_constant() && mubuf.offset + info.val <= const_max) {
+         } else if (i == 2 && info.is_constant() && mubuf.offset + info.val <= const_max &&
+                    !keep_soffset) {
             instr->operands[2] = Operand::c32(0);
             mubuf.offset += info.val;
             continue;
@@ -2616,7 +2624,8 @@ label_instruction(opt_ctx& ctx, aco_ptr<Instruction>& instr)
             mubuf.offset += offset;
             continue;
          } else if (i == 2 && parse_base_offset(ctx, instr.get(), i, &base, &offset, true) &&
-                    base.regClass() == s1 && mubuf.offset + offset <= const_max && !swizzled) {
+                    base.regClass() == s1 && mubuf.offset + offset <= const_max && !swizzled &&
+                    !keep_soffset) {
             instr->operands[i].setTemp(base);
             mubuf.offset += offset;
             continue;

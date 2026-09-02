@@ -358,6 +358,23 @@ static bool legalize_pseudo_post_ra(pco_instr *instr)
       return true;
    }
 
+   case PCO_OP_FLUSH_DMA: {
+      pco_builder b =
+         pco_builder_create(instr->parent_func, pco_cursor_before_instr(instr));
+
+      pco_ref dest = instr->dest[0];
+      pco_ref addr = instr->src[0];
+
+      unsigned chans = pco_ref_get_chans(dest);
+      assert(chans == 1);
+
+      pco_ld(&b, dest, pco_ref_drc(PCO_DRC_0), pco_ref_imm8(chans), addr);
+      pco_wdf(&b, pco_ref_drc(PCO_DRC_0));
+
+      pco_instr_delete(instr);
+      return true;
+   }
+
    default:
       break;
    }

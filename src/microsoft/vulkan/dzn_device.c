@@ -58,8 +58,6 @@
 #include "dzn_dxgi.h"
 #endif
 
-#include <directx/d3d12sdklayers.h>
-
 #define DZN_API_VERSION VK_MAKE_VERSION(1, 2, VK_HEADER_VERSION)
 
 #define MAX_TIER2_MEMORY_TYPES 4

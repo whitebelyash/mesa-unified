@@ -49,7 +49,12 @@ files_addrlib = files(
 )
 
 # Skip the addrlib definition of ADDR_FASTCALL so as not to use regparm.
-cpp_args_addrlib = ['-DADDR_FASTCALL=', '-DADDR_ALLOW_SIMD=1']
+cpp_args_addrlib = ['-DADDR_FASTCALL=']
+
+# The SIMD path in addrlib only supports x86 and Aarch64 (NEON).
+if host_machine.cpu_family() in ['x86', 'x86_64', 'aarch64']
+  cpp_args_addrlib += '-DADDR_ALLOW_SIMD=1'
+endif
 
 if host_machine.endian() == 'little'
   cpp_args_addrlib += '-DLITTLEENDIAN_CPU'

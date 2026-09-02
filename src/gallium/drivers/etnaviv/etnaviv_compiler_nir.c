@@ -531,7 +531,7 @@ emit_alu(struct etna_compile *c, nir_alu_instr * alu)
    if (alu->op == nir_op_bitfield_insert_etna)
       srcs[2] = src_swizzle(get_src(c, &alu->src[2].src), SWIZZLE(X, Y, Y, Y));
 
-   etna_emit_alu(c, alu->op, dst, srcs, alu->op == nir_op_fsat);
+   etna_emit_alu(c, alu, dst, srcs);
 }
 
 static void
@@ -1317,6 +1317,7 @@ etna_compile_shader(struct etna_shader_variant *v)
 
    NIR_PASS(_, s, etna_lower_io, v);
    NIR_PASS(_, s, nir_lower_pack);
+   NIR_PASS(_, s, nir_opt_combine_stores, nir_var_shader_out);
    etna_optimize_loop(s);
 
    if (v->shader->specs->vs_need_z_div)

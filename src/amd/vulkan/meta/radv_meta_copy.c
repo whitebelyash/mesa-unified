@@ -92,8 +92,10 @@ transfer_copy_memory_image(struct radv_cmd_buffer *cmd_buffer, VkAddressCopyFlag
       if (!radv_gang_init(cmd_buffer))
          return;
 
-      if (radv_flush_gang_leader_semaphore(cmd_buffer))
+      if (radv_flush_gang_leader_semaphore(cmd_buffer)) {
          radv_wait_gang_leader(cmd_buffer);
+         cmd_buffer->gang.flush_bits |= RADV_CMD_FLAG_INV_L2;
+      }
 
       radv_gang_cache_flush(cmd_buffer);
 
@@ -602,8 +604,10 @@ transfer_copy_image(struct radv_cmd_buffer *cmd_buffer, struct radv_image *src_i
       if (!radv_gang_init(cmd_buffer))
          return;
 
-      if (radv_flush_gang_leader_semaphore(cmd_buffer))
+      if (radv_flush_gang_leader_semaphore(cmd_buffer)) {
          radv_wait_gang_leader(cmd_buffer);
+         cmd_buffer->gang.flush_bits |= RADV_CMD_FLAG_INV_L2;
+      }
 
       radv_gang_cache_flush(cmd_buffer);
 

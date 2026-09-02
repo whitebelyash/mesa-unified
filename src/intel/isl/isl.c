@@ -5338,16 +5338,32 @@ isl_tiling_get_intratile_range_el(enum isl_tiling tiling,
                                       z_offset_el,
                                       array_offset);
 
+   /* Find the last element */
+   uint32_t end_x_offset_el = total_x_offset_el + total_extent_el.w - 1;
+   uint32_t end_y_offset_el = total_y_offset_el + total_extent_el.h - 1;
+   uint32_t end_z_offset_el = total_z_offset_el + total_extent_el.d - 1;
+   uint32_t end_a_offset_el = total_array_offset + total_extent_el.a - 1;
+
+   struct isl_tile_info tile_info;
+   isl_tiling_get_info(tiling, dim, msaa_layout, bpb, samples, &tile_info);
+   if (msaa_layout == ISL_MSAA_LAYOUT_ARRAY) {
+      if (tile_info.logical_extent_el.a > 1)
+         end_a_offset_el += samples - 1;
+      else
+         end_y_offset_el += (samples - 1) * array_pitch_el_rows;
+   }
+
+
    UNUSED uint32_t _x_offset_el, _y_offset_el, _z_offset_el, _array_slice;
    isl_tiling_get_intratile_offset_el(tiling, dim,
                                       msaa_layout, bpb,
                                       samples,
                                       row_pitch_B,
                                       array_pitch_el_rows,
-                                      total_x_offset_el + total_extent_el.w - 1,
-                                      total_y_offset_el + total_extent_el.h - 1,
-                                      total_z_offset_el + total_extent_el.d - 1,
-                                      total_array_offset + total_extent_el.a - 1,
+                                      end_x_offset_el,
+                                      end_y_offset_el,
+                                      end_z_offset_el,
+                                      end_a_offset_el,
                                       end_offset_B,
                                       &_x_offset_el,
                                       &_y_offset_el,

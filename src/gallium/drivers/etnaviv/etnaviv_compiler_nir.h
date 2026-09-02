@@ -416,8 +416,8 @@ emit_inst(struct etna_compile *c, struct etna_inst *inst)
 }
 
 void
-etna_emit_alu(struct etna_compile *c, nir_op op, struct etna_inst_dst dst,
-              struct etna_inst_src src[3], bool saturate);
+etna_emit_alu(struct etna_compile *c, nir_alu_instr *alu, struct etna_inst_dst dst,
+              struct etna_inst_src src[3]);
 
 void
 etna_emit_tex(struct etna_compile *c, nir_tex_instr *tex, unsigned dst_swiz,

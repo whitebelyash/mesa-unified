@@ -1042,6 +1042,7 @@ lower_heaps_intrin(nir_builder *b, nir_intrinsic_instr *intrin,
    case nir_intrinsic_store_deref_block_intel:
    case nir_intrinsic_deref_atomic:
    case nir_intrinsic_deref_atomic_swap:
+   case nir_intrinsic_deref_buffer_address:
       return try_lower_heaps_deref_access(b, intrin, ctx);
 
    case nir_intrinsic_load_buffer_ptr_deref:

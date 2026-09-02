@@ -88,6 +88,43 @@ ethosu_find_first_consumer(const struct pipe_ml_operation *poperations,
    return NULL;
 }
 
+static bool
+ethosu_fc_needs_flatten(const struct pipe_ml_operation *poperation)
+{
+   const struct pipe_tensor *input;
+   const struct pipe_tensor *output;
+   const struct pipe_tensor *weight;
+
+   if (poperation->type != PIPE_ML_OPERATION_TYPE_FULLY_CONNECTED)
+      return false;
+
+   input = poperation->input_tensors[0];
+   output = poperation->output_tensors[0];
+   weight = poperation->fcon.weight_tensor;
+
+   return weight &&
+          (weight->dims[3] != input->dims[3] ||
+           output->dims[1] != 1 ||
+           output->dims[2] != input->dims[1] * input->dims[2]);
+}
+
+static bool
+ethosu_has_flattened_fc_consumer(const struct pipe_ml_operation *poperations,
+                                 unsigned count, unsigned tensor_index)
+{
+   for (unsigned i = 0; i < count; i++) {
+      const struct pipe_ml_operation *poperation = &poperations[i];
+
+      for (unsigned j = 0; j < poperation->input_count; j++) {
+         if (poperation->input_tensors[j]->index == tensor_index &&
+             ethosu_fc_needs_flatten(poperation))
+            return true;
+      }
+   }
+
+   return false;
+}
+
 static unsigned
 ethosu_allocate_feature_map(struct ethosu_subgraph *subgraph, struct ethosu_tensor *tensor)
 {
@@ -203,15 +240,22 @@ ethosu_lower_fully_connected(struct ethosu_subgraph *subgraph,
    struct pipe_tensor *output_tensors[1] = {output_tensor};
    struct pipe_tensor *weight = poperation->fcon.weight_tensor;
 
-   flat_input.dims[1] = 1;
-   flat_input.dims[2] = 1;
-   flat_input.dims[3] = input_tensor->dims[1] * input_tensor->dims[2] *
-                        input_tensor->dims[3];
+   if (ethosu_fc_needs_flatten(poperation)) {
+      unsigned rows = input_tensor->dims[1] * input_tensor->dims[2] *
+                      input_tensor->dims[3] / weight->dims[3];
 
-   if (weight->dims[1] == 1 &&
-       weight->dims[3] == input_tensor->dims[3] &&
-       output_tensor->dims[1] == 1 &&
-       output_tensor->dims[2] == input_tensor->dims[1] * input_tensor->dims[2]) {
+      flat_input.dims[1] = rows;
+      flat_input.dims[2] = 1;
+      flat_input.dims[3] = weight->dims[3];
+
+      spatial_output.dims[1] = rows;
+      spatial_output.dims[2] = 1;
+      spatial_output.dims[3] = weight->dims[2];
+      output_tensors[0] = &spatial_output;
+   } else if (weight->dims[1] == 1 &&
+              weight->dims[3] == input_tensor->dims[3] &&
+              output_tensor->dims[1] == 1 &&
+              output_tensor->dims[2] == input_tensor->dims[1] * input_tensor->dims[2]) {
       flat_input = *input_tensor;
 
       spatial_output.dims[1] = input_tensor->dims[1];
@@ -860,7 +904,10 @@ register_tensors(struct ethosu_subgraph *subgraph,
             if (tensor->shape.depth % 16 == 0) {
                const struct pipe_ml_operation *consumer =
                   ethosu_find_first_consumer(poperations, count, ptensor->index);
-               if (consumer && consumer->type != PIPE_ML_OPERATION_TYPE_RESHAPE)
+               if (consumer && consumer->type != PIPE_ML_OPERATION_TYPE_RESHAPE &&
+                   !ethosu_fc_needs_flatten(poperation) &&
+                   !ethosu_has_flattened_fc_consumer(poperations, count,
+                                                     ptensor->index))
                   tensor->layout = ETHOSU_LAYOUT_NHCWB16;
             }
          }

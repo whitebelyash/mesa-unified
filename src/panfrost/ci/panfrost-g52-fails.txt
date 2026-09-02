@@ -300,12 +300,6 @@ dEQP-VK.api.device_init.create_device_global_priority_khr.basic,Fail
 dEQP-VK.api.device_init.create_device_global_priority_query.basic,Fail
 dEQP-VK.api.device_init.create_device_global_priority_query_khr.basic,Fail
 
-# New failures with VKCTS 1.4.4.0
-dEQP-VK.pipeline.fast_linked_library.vertex_input.misc.unbound_input,Crash
-dEQP-VK.pipeline.fast_linked_library.vertex_input.misc.unbound_input_dynamic,Crash
-dEQP-VK.pipeline.monolithic.vertex_input.misc.unbound_input,Crash
-dEQP-VK.pipeline.monolithic.vertex_input.misc.unbound_input_dynamic,Crash
-
 # Regressions from https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/39987
 # ../src/panfrost/compiler/bifrost/bifrost/bi_pack.c:187: bi_pack_registers: Assertion `!(mode & 0x8)' failed.
 dEQP-VK.robustness.image_robustness.bind.notemplate.r32i.dontunroll.nonvolatile.storage_image.fmt_qual.img.samples_1.cube.comp,Crash
@@ -323,10 +317,6 @@ dEQP-VK.glsl.texture_functions.query.texturequerylod.sampler2d_fixed_trilinearno
 dEQP-VK.glsl.texture_functions.query.texturequerylod.sampler2d_float_trilinear_fragment,Fail
 dEQP-VK.glsl.texture_functions.query.texturequerylod.sampler2d_float_trilinearnon_zero_base_level_fragment,Fail
 dEQP-VK.image.host_image_copy.properties.properties,Fail
-dEQP-VK.pipeline.fast_linked_library.vertex_input.misc.unbound_input_dynamic_integer,Crash
-dEQP-VK.pipeline.fast_linked_library.vertex_input.misc.unbound_input_integer,Crash
-dEQP-VK.pipeline.monolithic.vertex_input.misc.unbound_input_dynamic_integer,Crash
-dEQP-VK.pipeline.monolithic.vertex_input.misc.unbound_input_integer,Crash
 dEQP-VK.wsi.acquire_drm_display.acquire_drm_display_invalid_fd,Crash
 dEQP-VK.wsi.acquire_drm_display.acquire_drm_display_not_master,Crash
 dEQP-VK.wsi.acquire_drm_display.acquire_drm_display_unowned_connector_id,Crash

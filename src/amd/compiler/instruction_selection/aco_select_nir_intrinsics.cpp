@@ -560,6 +560,19 @@ mubuf_load_callback(Builder& bld, const LoadEmitInfo& info, unsigned bytes_neede
       (info.sync.semantics & semantic_atomic) && info.component_size == 8 && align_ >= 8;
    bool use_mtbuf = false;
 
+   unsigned const_offset = info.const_offset;
+
+   /* Use SOFFSET to achieve correct bounds checking on GFX6-7 */
+   if (const_offset && idxen && bld.program->gfx_level <= GFX7) {
+      if (soffset.isTemp())
+         soffset = bld.sop2(aco_opcode::s_add_u32, bld.def(s1), bld.def(s1, scc), soffset,
+                            Operand::c32(const_offset));
+      else
+         soffset = Operand::c32(soffset.constantValue() + const_offset);
+
+      const_offset = 0;
+   }
+
    unsigned bytes_size = 0;
    aco_opcode op;
    if (bytes_needed == 1 || align_ % 2) {
@@ -595,7 +608,7 @@ mubuf_load_callback(Builder& bld, const LoadEmitInfo& info, unsigned bytes_neede
       mubuf->mtbuf().idxen = idxen;
       mubuf->mtbuf().cache = info.cache;
       mubuf->mtbuf().sync = info.sync;
-      mubuf->mtbuf().offset = info.const_offset;
+      mubuf->mtbuf().offset = const_offset;
       mubuf->mtbuf().dfmt = V_008F0C_BUF_DATA_FORMAT_32_32;
       mubuf->mtbuf().nfmt = V_008F0C_BUF_NUM_FORMAT_UINT;
       init_disable_wqm(bld, mubuf->mtbuf(), info.disable_wqm);
@@ -604,7 +617,7 @@ mubuf_load_callback(Builder& bld, const LoadEmitInfo& info, unsigned bytes_neede
       mubuf->mubuf().idxen = idxen;
       mubuf->mubuf().cache = info.cache;
       mubuf->mubuf().sync = info.sync;
-      mubuf->mubuf().offset = info.const_offset;
+      mubuf->mubuf().offset = const_offset;
       init_disable_wqm(bld, mubuf->mubuf(), info.disable_wqm);
    }
    RegClass rc = RegClass::get(RegType::vgpr, bytes_size);
@@ -1299,6 +1312,19 @@ mtbuf_load_callback(Builder& bld, const LoadEmitInfo& info, unsigned bytes_neede
    else if (idxen)
       vaddr = Operand(info.idx);
 
+   unsigned const_offset = info.const_offset;
+
+   /* Use SOFFSET to achieve correct bounds checking on GFX6-7 */
+   if (const_offset && idxen && bld.program->gfx_level <= GFX7) {
+      if (soffset.isTemp())
+         soffset = bld.sop2(aco_opcode::s_add_u32, bld.def(s1), bld.def(s1, scc), soffset,
+                            Operand::c32(const_offset));
+      else
+         soffset = Operand::c32(soffset.constantValue() + const_offset);
+
+      const_offset = 0;
+   }
+
    /* Determine number of fetched components.
     * Note, ACO IR works with GFX6-8 nfmt + dfmt fields, these are later converted for GFX10+.
     */
@@ -1362,7 +1388,7 @@ mtbuf_load_callback(Builder& bld, const LoadEmitInfo& info, unsigned bytes_neede
    mtbuf->mtbuf().idxen = idxen;
    mtbuf->mtbuf().cache = info.cache;
    mtbuf->mtbuf().sync = info.sync;
-   mtbuf->mtbuf().offset = info.const_offset;
+   mtbuf->mtbuf().offset = const_offset;
    mtbuf->mtbuf().dfmt = fetch_fmt & 0xf;
    mtbuf->mtbuf().nfmt = fetch_fmt >> 4;
    RegClass rc = RegClass::get(RegType::vgpr, bytes_size);

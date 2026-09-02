@@ -1621,11 +1621,11 @@ opcode("bounds_agx", 0, tint, [0, 0, 0],
        [tint, tint, tint], False,
        "", "src1 <= src2 ? src0 : 0")
 
-binop_convert("interleave", tuint32, tuint16, "", """
+binop_convert("interleave", tuint32, tuint, "", """
       dst = 0;
       for (unsigned bit = 0; bit < 16; bit++) {
-          dst |= (src0 & (1 << bit)) << bit;
-          dst |= (src1 & (1 << bit)) << (bit + 1);
+          dst |= ((uint32_t)src0 & (1 << bit)) << bit;
+          dst |= ((uint32_t)src1 & (1 << bit)) << (bit + 1);
       }""", description="""
       Interleave bits of 16-bit integers to calculate a 32-bit integer. This can
       be used as-is for Morton encoding.

@@ -2101,7 +2101,10 @@ bi_emit_intrinsic(bi_builder *b, nir_intrinsic_instr *instr)
       break;
 
    case nir_intrinsic_shader_clock:
-      bi_ld_gclk_u64_to(b, dst, BI_SOURCE_CYCLE_COUNTER);
+      bi_ld_gclk_u64_to(b, dst,
+                        nir_intrinsic_memory_scope(instr) == SCOPE_SUBGROUP
+                           ? BI_SOURCE_CYCLE_COUNTER
+                           : BI_SOURCE_SYSTEM_TIMESTAMP);
       bi_split_def(b, &instr->def);
       b->shader->info.has_ld_gclk_instr = true;
       break;

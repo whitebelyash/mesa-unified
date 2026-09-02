@@ -28,6 +28,14 @@
     CI_TRON__B2C_EXEC_SHELL_FLAGS: "-euc -o pipefail"
     CI_TRON__B2C_EXEC_CMD: "curl --silent --fail-with-body {{ job.http.url }}$CI_TRON_HTTP_ARTIFACT__INSTALL__PATH | tar --zstd --extract && export SCRIPTS_DIR=$$PWD/install && $$SCRIPTS_DIR/common/init-stage2.sh"
 
+    # HACK: bypass the caching proxy until the bug is fixed upstream
+    CI_TRON__B2C_IMAGE__TELEGRAF: "$CI_TRON__B2C_TELEGRAF_IMAGE"
+    CI_TRON__B2C_IMAGE__MACHINE_REGISTRATION: "$CI_TRON__B2C_MACHINE_REGISTRATION_IMAGE"
+    CI_TRON__B2C_IMAGE__IMAGE_UNDER_TEST: "$CI_TRON__B2C_IMAGE_UNDER_TEST"
+    CI_TRON_PROXY__ALLOWED_ENDPOINTS_CATEGORY__REGISTRY__FDO: registry.freedesktop.org:443
+    CI_TRON_PROXY__ALLOWED_ENDPOINTS_CATEGORY__REGISTRY__GITLAB_FOR_AUTH: gitlab.freedesktop.org:443
+    CI_TRON_PROXY__ALLOWED_ENDPOINTS_CATEGORY__REGISTRY__BACKEND: eu-central.object.fastlystorage.app:443
+
     # Assume by default this is running deqp, as that's almost always true
     HWCI_TEST_SCRIPT: install/deqp-runner.sh
 

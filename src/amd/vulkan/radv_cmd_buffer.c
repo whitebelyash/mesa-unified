@@ -1233,6 +1233,11 @@ radv_destroy_cmd_buffer(struct vk_command_buffer *vk_cmd_buffer)
          radv_bo_destroy(device, &cmd_buffer->vk.base, cmd_buffer->gfx9_fence_bo_tmz);
       }
 
+      if (cmd_buffer->gang.sem.bo) {
+         radv_rmv_log_command_buffer_bo_destroy(device, cmd_buffer->gang.sem.bo);
+         radv_bo_destroy(device, &cmd_buffer->vk.base, cmd_buffer->gang.sem.bo);
+      }
+
       if (cmd_buffer->gfx9_eop_bug_bo_tmz) {
          radv_rmv_log_command_buffer_bo_destroy(device, cmd_buffer->gfx9_eop_bug_bo_tmz);
          radv_bo_destroy(device, &cmd_buffer->vk.base, cmd_buffer->gfx9_eop_bug_bo_tmz);
@@ -1596,21 +1601,80 @@ radv_gang_cache_flush(struct radv_cmd_buffer *cmd_buffer)
    cmd_buffer->gang.flush_bits = 0;
 }
 
+/** Return true when gang members have a coherent view of VRAM. */
 static bool
-radv_gang_sem_init(struct radv_cmd_buffer *cmd_buffer)
+radv_gang_is_coherent(const struct radeon_info *const info, const enum amd_ip_type leader_ip,
+                      ASSERTED enum amd_ip_type follower_ip)
 {
-   if (cmd_buffer->gang.sem.va)
+   assert(follower_ip == AMD_IP_COMPUTE);
+
+   /* GFX and ACE CP are always coherent. */
+   if (leader_ip == AMD_IP_GFX)
       return true;
 
-   /* DWORD 0:
-    *   leader->follower semaphore: used when leader does something that the follower has to wait for
-    *   - for transfer queues: when SDMA is working on a transfer that ACE needs to wait for
-    *   - for task/mesh: when GFX is doing something that ACE needs to wait for
-    * DWORD 1:
-    *   follower->leader semaphore: used when follower does something that the leader has to wait for
-    *   - for transfer queues: when ACE is working on a transfer that SDMA needs to wait for
-    *   - for task/mesh: no needed yet
+   /* SDMA is not coherent with GFX/ACE CP on GFX10.x-11.x
+    * because GFX/ACE CP read memory through L2 cache but
+    * SDMA does not use L2 cache by default.
     */
+   assert(leader_ip == AMD_IP_SDMA);
+   return info->gfx_level <= GFX8 || info->cp_sdma_ge_use_system_memory_scope;
+}
+
+static bool
+radv_gang_sem_should_use_separate_bo(struct radv_cmd_buffer *cmd_buffer)
+{
+   /* If we already allocated the separate BO, use that. */
+   if (cmd_buffer->gang.sem.bo)
+      return true;
+
+   const struct radv_device *const device = radv_cmd_buffer_device(cmd_buffer);
+   const struct radv_physical_device *const pdev = radv_device_physical(device);
+   const enum radeon_bo_domain upload_bo_dom =
+      /* Upload BO exists: its memory domain is known */
+      cmd_buffer->upload.upload_bo ? cmd_buffer->upload.upload_bo->initial_domain :
+      /* Upload BO doesn't exist: judge by all_vram_visible to make this deterministic */
+      pdev->info.all_vram_visible ? RADEON_DOMAIN_VRAM : RADEON_DOMAIN_GTT;
+
+   /* Make sure the gang semaphore is always in VRAM */
+   if (pdev->info.has_dedicated_vram && !(upload_bo_dom & RADEON_DOMAIN_VRAM))
+      return true;
+
+   /* Use separate BO when gang members aren't coherent */
+   return !radv_gang_is_coherent(&pdev->info, cmd_buffer->cs->hw_ip, cmd_buffer->gang.cs->hw_ip);
+}
+
+static bool
+radv_gang_sem_init_with_separate_bo(struct radv_cmd_buffer *cmd_buffer)
+{
+   struct radv_device *const device = radv_cmd_buffer_device(cmd_buffer);
+   const struct radv_physical_device *const pdev = radv_device_physical(device);
+
+   if (!cmd_buffer->gang.sem.bo) {
+      enum radeon_bo_flag flags =
+         RADEON_FLAG_NO_CPU_ACCESS | RADEON_FLAG_NO_INTERPROCESS_SHARING | RADEON_FLAG_ZERO_VRAM;
+
+      /* BYPASS L2 cache when gang members are non-coherent. */
+      if (!radv_gang_is_coherent(&pdev->info, cmd_buffer->cs->hw_ip, cmd_buffer->gang.cs->hw_ip))
+         flags |= RADEON_FLAG_GL2_BYPASS;
+
+      VkResult r = radv_bo_create(device, &cmd_buffer->vk.base, 8, 4, RADEON_DOMAIN_VRAM, flags, RADV_BO_PRIORITY_FENCE,
+                                  0, true, &cmd_buffer->gang.sem.bo);
+      if (r != VK_SUCCESS) {
+         vk_command_buffer_set_error(&cmd_buffer->vk, VK_ERROR_OUT_OF_DEVICE_MEMORY);
+         return false;
+      }
+
+      radv_rmv_log_command_buffer_bo_create(device, cmd_buffer->gang.sem.bo, 0, 8, 0);
+   }
+
+   radv_cs_add_buffer(device->ws, cmd_buffer->cs->b, cmd_buffer->gang.sem.bo);
+   cmd_buffer->gang.sem.va = radv_buffer_get_va(cmd_buffer->gang.sem.bo);
+   return true;
+}
+
+static bool
+radv_gang_sem_init_with_upload_bo(struct radv_cmd_buffer *cmd_buffer)
+{
    uint64_t sem_init = 0;
    uint32_t va_off = 0;
    if (!radv_cmd_buffer_upload_data(cmd_buffer, sizeof(uint64_t), &sem_init, &va_off)) {
@@ -1620,6 +1684,31 @@ radv_gang_sem_init(struct radv_cmd_buffer *cmd_buffer)
 
    cmd_buffer->gang.sem.va = radv_buffer_get_va(cmd_buffer->upload.upload_bo) + va_off;
    return true;
+}
+
+/**
+ * Initialize the gang semaphore so that the gang leader and follower
+ * command streams can be synchronized.
+ *
+ * DWORD 0:
+ *   leader->follower semaphore: used when leader does something that the follower has to wait for
+ *   - for transfer queues: when SDMA is working on a transfer that ACE needs to wait for
+ *   - for task/mesh: when GFX is doing something that ACE needs to wait for
+ * DWORD 1:
+ *   follower->leader semaphore: used when follower does something that the leader has to wait for
+ *   - for transfer queues: when ACE is working on a transfer that SDMA needs to wait for
+ *   - for task/mesh: no needed yet
+ */
+static bool
+radv_gang_sem_init(struct radv_cmd_buffer *cmd_buffer)
+{
+   if (cmd_buffer->gang.sem.va)
+      return true;
+
+   if (radv_gang_sem_should_use_separate_bo(cmd_buffer))
+      return radv_gang_sem_init_with_separate_bo(cmd_buffer);
+
+   return radv_gang_sem_init_with_upload_bo(cmd_buffer);
 }
 
 static bool
@@ -6843,7 +6932,6 @@ radv_get_vbo_info(const struct radv_cmd_buffer *cmd_buffer, uint32_t idx, struct
    vbo_info->stride = d->vk.vi_binding_strides[binding];
 
    vbo_info->attrib_offset = d->vertex_input.offsets[idx];
-   vbo_info->attrib_index_offset = d->vertex_input.attrib_index_offset[idx];
    vbo_info->attrib_format_size = d->vertex_input.format_sizes[idx];
    vbo_info->non_trivial_format = d->vertex_input.non_trivial_format[idx];
 }
@@ -6914,11 +7002,6 @@ radv_write_vertex_descriptor(const struct radv_cmd_buffer *cmd_buffer, const str
          num_records = 1; /* only one vertex */
       } else {
          num_records = (num_records - attrib_end) / stride + 1;
-         /* If attrib_offset>stride, then the compiler will increase the vertex index by
-          * attrib_offset/stride and decrease the offset by attrib_offset%stride. This is
-          * only allowed with static strides.
-          */
-         num_records += vbo_info.attrib_index_offset;
       }
 
       /* GFX10 uses OOB_SELECT_RAW if stride==0, so convert num_records from elements into
@@ -10798,16 +10881,16 @@ radv_cmd_buffer_begin_rendering(struct radv_cmd_buffer *cmd_buffer, const VkRend
             uint32_t level = ds_iview->vk.base_mip_level;
 
             /* HTILE buffer */
-            uint64_t htile_offset = ds_image->planes[0].surface.meta_offset +
-                                    (uint64_t)ds_iview->vk.base_array_layer * ds_image->planes[0].surface.meta_slice_size +
-                                    ds_image->planes[0].surface.u.gfx9.meta_levels[level].offset;
+            uint64_t htile_offset =
+               ds_image->planes[0].surface.meta_offset + ds_image->planes[0].surface.u.gfx9.meta_levels[level].offset;
             const uint64_t htile_va = ds_image->bindings[0].addr + htile_offset;
 
             assert(render_area.offset.x + render_area.extent.width <= ds_image->vk.extent.width &&
                    render_area.offset.x + render_area.extent.height <= ds_image->vk.extent.height);
 
             /* Copy the VRS rates to the HTILE buffer. */
-            radv_copy_vrs_htile(cmd_buffer, vrs_att.iview, &render_area, ds_image, htile_va, true);
+            radv_copy_vrs_htile(cmd_buffer, vrs_att.iview, &render_area, ds_image, ds_iview->vk.base_array_layer,
+                                htile_va, true);
          } else {
             /* When a subpass uses a VRS attachment without binding a depth/stencil attachment, or when
              * HTILE isn't enabled, we use a fallback that copies the VRS rates to our internal HTILE buffer.
@@ -10826,7 +10909,7 @@ radv_cmd_buffer_begin_rendering(struct radv_cmd_buffer *cmd_buffer, const VkRend
                   MIN2(render_area.extent.height, ds_image->vk.extent.height - render_area.offset.y);
 
                /* Copy the VRS rates to the HTILE buffer. */
-               radv_copy_vrs_htile(cmd_buffer, vrs_att.iview, &render_area, ds_image, htile_va, false);
+               radv_copy_vrs_htile(cmd_buffer, vrs_att.iview, &render_area, ds_image, 0, htile_va, false);
             }
          }
       }
@@ -13758,7 +13841,8 @@ radv_bind_graphics_shaders(struct radv_cmd_buffer *cmd_buffer)
 
 /* MUST inline this function to avoid massive perf loss in drawoverhead */
 ALWAYS_INLINE static bool
-radv_before_draw(struct radv_cmd_buffer *cmd_buffer, const struct radv_draw_info *info, uint32_t drawCount, bool dgc)
+radv_before_draw(struct radv_cmd_buffer *cmd_buffer, const struct radv_draw_info *info, uint32_t drawCount,
+                 uint32_t max_indirect_draw_count, bool dgc)
 {
    const struct radv_device *device = radv_cmd_buffer_device(cmd_buffer);
    const struct radv_physical_device *pdev = radv_device_physical(device);
@@ -13777,6 +13861,9 @@ radv_before_draw(struct radv_cmd_buffer *cmd_buffer, const struct radv_draw_info
 
       /* Handle count == 0. */
       if (unlikely(!info->count && !info->strmout_va))
+         return false;
+   } else {
+      if (!max_indirect_draw_count)
          return false;
    }
 
@@ -13969,7 +14056,7 @@ radv_CmdDraw(VkCommandBuffer commandBuffer, uint32_t vertexCount, uint32_t insta
    info.indirect_va = 0;
    info.indexed = false;
 
-   if (!radv_before_draw(cmd_buffer, &info, 1, false))
+   if (!radv_before_draw(cmd_buffer, &info, 1, 0, false))
       return;
    const VkMultiDrawInfoEXT minfo = {firstVertex, vertexCount};
    radv_emit_direct_draw_packets(cmd_buffer, &info, 1, &minfo, 0, 0);
@@ -13993,7 +14080,7 @@ radv_CmdDrawMultiEXT(VkCommandBuffer commandBuffer, uint32_t drawCount, const Vk
    info.indirect_va = 0;
    info.indexed = false;
 
-   if (!radv_before_draw(cmd_buffer, &info, drawCount, false))
+   if (!radv_before_draw(cmd_buffer, &info, drawCount, 0, false))
       return;
    radv_emit_direct_draw_packets(cmd_buffer, &info, drawCount, pVertexInfo, 0, stride);
    radv_after_draw(cmd_buffer);
@@ -14013,7 +14100,7 @@ radv_CmdDrawIndexed(VkCommandBuffer commandBuffer, uint32_t indexCount, uint32_t
    info.strmout_va = 0;
    info.indirect_va = 0;
 
-   if (!radv_before_draw(cmd_buffer, &info, 1, false))
+   if (!radv_before_draw(cmd_buffer, &info, 1, 0, false))
       return;
    const VkMultiDrawIndexedInfoEXT minfo = {firstIndex, indexCount, vertexOffset};
    radv_emit_draw_packets_indexed(cmd_buffer, &info, 1, &minfo, 0, NULL);
@@ -14039,7 +14126,7 @@ radv_CmdDrawMultiIndexedEXT(VkCommandBuffer commandBuffer, uint32_t drawCount,
    info.strmout_va = 0;
    info.indirect_va = 0;
 
-   if (!radv_before_draw(cmd_buffer, &info, drawCount, false))
+   if (!radv_before_draw(cmd_buffer, &info, drawCount, 0, false))
       return;
    radv_emit_draw_packets_indexed(cmd_buffer, &info, drawCount, pIndexInfo, stride, pVertexOffset);
    radv_after_draw(cmd_buffer);
@@ -14080,7 +14167,7 @@ radv_CmdDrawIndirect2KHR(VkCommandBuffer commandBuffer, const VkDrawIndirect2Inf
    info.indexed = false;
    info.instance_count = 0;
 
-   if (!radv_before_draw(cmd_buffer, &info, 1, false))
+   if (!radv_before_draw(cmd_buffer, &info, 1, pInfo->drawCount, false))
       return;
    radv_emit_indirect_draw_packets(cmd_buffer, &info);
    radv_after_draw(cmd_buffer);
@@ -14121,7 +14208,7 @@ radv_CmdDrawIndexedIndirect2KHR(VkCommandBuffer commandBuffer, const VkDrawIndir
    info.strmout_va = 0;
    info.instance_count = 0;
 
-   if (!radv_before_draw(cmd_buffer, &info, 1, false))
+   if (!radv_before_draw(cmd_buffer, &info, 1, pInfo->drawCount, false))
       return;
    radv_emit_indirect_draw_packets(cmd_buffer, &info);
    radv_after_draw(cmd_buffer);
@@ -14166,7 +14253,7 @@ radv_CmdDrawIndirectCount2KHR(VkCommandBuffer commandBuffer, const VkDrawIndirec
    info.indexed = false;
    info.instance_count = 0;
 
-   if (!radv_before_draw(cmd_buffer, &info, 1, false))
+   if (!radv_before_draw(cmd_buffer, &info, 1, pInfo->maxDrawCount, false))
       return;
    radv_emit_indirect_draw_packets(cmd_buffer, &info);
    radv_after_draw(cmd_buffer);
@@ -14212,7 +14299,7 @@ radv_CmdDrawIndexedIndirectCount2KHR(VkCommandBuffer commandBuffer, const VkDraw
    info.strmout_va = 0;
    info.instance_count = 0;
 
-   if (!radv_before_draw(cmd_buffer, &info, 1, false))
+   if (!radv_before_draw(cmd_buffer, &info, 1, pInfo->maxDrawCount, false))
       return;
    radv_emit_indirect_draw_packets(cmd_buffer, &info);
    radv_after_draw(cmd_buffer);
@@ -14503,7 +14590,8 @@ radv_CmdExecuteGeneratedCommandsEXT(VkCommandBuffer commandBuffer, VkBool32 isPr
          if (!radv_before_taskmesh_draw(cmd_buffer, &info, 1, true))
             return;
       } else {
-         if (!radv_before_draw(cmd_buffer, &info, 1, true))
+         if (!radv_before_draw(cmd_buffer, &info, 1, layout->vk.draw_count ? pGeneratedCommandsInfo->maxDrawCount : 1,
+                               true))
             return;
       }
    }
@@ -16683,7 +16771,7 @@ radv_CmdDrawIndirectByteCount2EXT(VkCommandBuffer commandBuffer, uint32_t instan
    info.indexed = false;
    info.indirect_va = 0;
 
-   if (!radv_before_draw(cmd_buffer, &info, 1, false))
+   if (!radv_before_draw(cmd_buffer, &info, 1, 0, false))
       return;
    struct VkMultiDrawInfoEXT minfo = {0, 0};
    radv_emit_strmout_buffer(cmd_buffer, &info, counterOffset);

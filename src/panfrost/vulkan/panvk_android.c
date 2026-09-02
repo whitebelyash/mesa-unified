@@ -110,7 +110,8 @@ panvk_android_get_buffer_mem_reqs(VkDevice dev_handle, VkBuffer buf_handle,
 }
 
 static VkResult
-panvk_android_anb_init(struct panvk_device *dev, VkImageCreateInfo *create_info,
+panvk_android_anb_init(struct panvk_device *dev,
+                       const VkImageCreateInfo *create_info,
                        struct panvk_image *img)
 {
    VkResult result;
@@ -130,9 +131,9 @@ panvk_android_anb_init(struct panvk_device *dev, VkImageCreateInfo *create_info,
       .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT,
    };
 
-   /* create_info is a already local copy from the caller */
-   create_info->pNext = &external_info;
-   return panvk_image_init(img, create_info);
+   VkImageCreateInfo local_create = *create_info;
+   local_create.pNext = &external_info;
+   return panvk_image_init(img, &local_create);
 }
 
 VkResult

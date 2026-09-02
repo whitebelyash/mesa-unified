@@ -756,10 +756,13 @@ anv_shader_hash_state(struct vk_physical_device *device,
          populate_mesh_prog_key(&key.mesh, device, NULL, state, stages);
          _mesa_blake3_update(&blake3_ctx, &key.mesh, sizeof(key.mesh));
          break;
-      case VK_SHADER_STAGE_FRAGMENT_BIT:
+      case VK_SHADER_STAGE_FRAGMENT_BIT: {
+         uint32_t color_mask = rp_color_mask(state);
+         _mesa_blake3_update(&blake3_ctx, &color_mask, sizeof(color_mask));
          populate_fs_prog_key(&key.fs, device, NULL, state, stages);
          _mesa_blake3_update(&blake3_ctx, &key.fs, sizeof(key.fs));
          break;
+      }
       case VK_SHADER_STAGE_COMPUTE_BIT:
          populate_cs_prog_key(&key.cs, device, NULL);
          _mesa_blake3_update(&blake3_ctx, &key.cs, sizeof(key.cs));

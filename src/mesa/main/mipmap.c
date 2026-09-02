@@ -1082,16 +1082,15 @@ _mesa_generate_mipmap(struct gl_context *ctx, GLenum target,
                       struct gl_texture_object *texObj)
 {
    struct gl_texture_image *srcImage;
-   GLint maxLevel;
 
    assert(texObj);
    srcImage = _mesa_select_tex_image(texObj, target, texObj->Attrib.BaseLevel);
    assert(srcImage);
 
-   maxLevel = _mesa_max_texture_levels(ctx, texObj->Target) - 1;
-   assert(maxLevel >= 0);  /* bad target */
-
-   maxLevel = MIN2(maxLevel, texObj->Attrib.MaxLevel);
+   int max_texture_level = _mesa_compute_num_levels(ctx, texObj, target) - 1;
+   int max_supported_level = _mesa_max_texture_levels(ctx, texObj->Target) - 1;
+   int maxLevel = MIN2(max_texture_level, max_supported_level);
+   assert(maxLevel >= 0);
 
    _mesa_prepare_mipmap_levels(ctx, texObj, texObj->Attrib.BaseLevel, maxLevel);
 

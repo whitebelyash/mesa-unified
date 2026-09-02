@@ -2,7 +2,7 @@
 
 {% block scriptwarning %}
 <div id="fallback" class="alert alert-warning">
-<script>$('#fallback').hide();</script>
+<script>document.querySelector('#fallback').remove();</script>
 <h5>{{ _('Warning') }}</h5>
 <p>
 {% trans %}Please activate JavaScript to enable the search

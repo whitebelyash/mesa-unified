@@ -128,7 +128,24 @@ ethosu_ml_operation_supported(struct pipe_ml_device *pdevice,
 
    switch (operation->type) {
    case PIPE_ML_OPERATION_TYPE_FULLY_CONNECTED: {
-      supported = true;
+      struct pipe_tensor *input = operation->input_tensors[0];
+      struct pipe_tensor *output = operation->output_tensors[0];
+      struct pipe_tensor *weight = operation->fcon.weight_tensor;
+      uint64_t input_size;
+      uint64_t output_size;
+
+      if (!weight || input->dims[0] != output->dims[0] ||
+          weight->dims[0] != 1 || weight->dims[1] != 1 ||
+          !weight->dims[2] || !weight->dims[3])
+         break;
+
+      input_size = (uint64_t)input->dims[1] * input->dims[2] *
+                   input->dims[3];
+      output_size = (uint64_t)output->dims[1] * output->dims[2] *
+                    output->dims[3];
+      supported = input_size % weight->dims[3] == 0 &&
+                  output_size == input_size / weight->dims[3] *
+                                    weight->dims[2];
       break;
    }
    case PIPE_ML_OPERATION_TYPE_CONVOLUTION: {

@@ -59,7 +59,6 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_icd.h>
 
-#define D3D12_IGNORE_SDK_LAYERS
 #include <unknwn.h>
 #include <directx/d3d12.h>
 

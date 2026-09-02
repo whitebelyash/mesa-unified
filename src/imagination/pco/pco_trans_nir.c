@@ -2381,6 +2381,13 @@ static pco_instr *trans_intr(trans_ctx *tctx, nir_intrinsic_instr *intr)
       break;
    }
 
+   case nir_intrinsic_dma_flush_pco:
+      assert(pco_ref_get_chans(dest) == 1u);
+      assert(pco_ref_get_chans(src[0]) == 2u);
+
+      instr = pco_flush_dma(&tctx->b, dest, src[0]);
+      break;
+
    /* Vertex sysvals. */
    case nir_intrinsic_load_vertex_id:
    case nir_intrinsic_load_instance_id:

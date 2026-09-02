@@ -3263,29 +3263,13 @@ panfrost_update_state_3d(struct panfrost_batch *batch)
          panfrost_emit_vertex_buffers(batch);
    }
 #else
-   unsigned vt_shader_dirty = ctx->dirty_shader[MESA_SHADER_VERTEX];
-   struct panfrost_compiled_shader *vs = ctx->prog[MESA_SHADER_VERTEX];
-   struct panfrost_vertex_state *vstate = ctx->vertex;
-   bool attr_offsetted_by_instance_base =
-      vstate->attr_depends_on_base_instance_mask &
-      BITFIELD_MASK(vs->info.attributes_read_count);
-#if PAN_ARCH >= 6
-   /* Bifrost needs to place texel buffers after the image attributes, so we
-    * need to emit them if textures or the shader is dirty. */
-   unsigned attribs_dirty_mask =
-      PAN_DIRTY_STAGE_IMAGE | PAN_DIRTY_STAGE_TEXTURE | PAN_DIRTY_STAGE_SHADER;
-#else
-   unsigned attribs_dirty_mask = PAN_DIRTY_STAGE_IMAGE | PAN_DIRTY_STAGE_SHADER;
-#endif
-
-   /* Vertex data, vertex shader and images accessed by the vertex shader have
-    * an impact on the attributes array, we need to re-emit anytime one of these
-    * parameters changes. */
-   if ((dirty & PAN_DIRTY_VERTEX) || (vt_shader_dirty & attribs_dirty_mask) ||
-       attr_offsetted_by_instance_base) {
-      batch->attribs[MESA_SHADER_VERTEX] = panfrost_emit_vertex_data(
-         batch, &batch->attrib_bufs[MESA_SHADER_VERTEX]);
-   }
+   /* Always re-emit vertex attributes, in midgard and bifrost they depend on
+    * per-draw parameters (e.g. vertex_count, instancing, images and textures),
+    * which are likely to change every draw, so don't bother trying to save an
+    * attribute[_buffer] re-emission.
+    */
+   batch->attribs[MESA_SHADER_VERTEX] = panfrost_emit_vertex_data(
+      batch, &batch->attrib_bufs[MESA_SHADER_VERTEX]);
 #endif
 }
 
@@ -4142,8 +4126,6 @@ panfrost_create_vertex_elements_state(struct pipe_context *pctx,
       so->element_buffer[i] = pan_assign_vertex_buffer(
          so->buffers, &so->nr_bufs, elements[i].vertex_buffer_index,
          elements[i].instance_divisor);
-      if (elements[i].instance_divisor)
-         so->attr_depends_on_base_instance_mask |= BITFIELD_BIT(i);
    }
 
    for (int i = 0; i < num_elements; ++i) {

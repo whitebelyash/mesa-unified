@@ -179,9 +179,6 @@ struct ir3_compiler {
    /* Whether SSBOs have descriptors for sampling with ISAM */
    bool has_isam_ssbo;
 
-   /* Is lock/unlock sequence needed for CS? */
-   bool cs_lock_unlock_quirk;
-
    /* True if the shfl instruction is supported. Needed for subgroup rotate and
     * (more efficient) shuffle.
     */

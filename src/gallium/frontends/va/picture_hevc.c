@@ -405,9 +405,9 @@ void vlVaDecoderHEVCBitstreamHeader(vlVaContext *context, vlVaBuffer *buf)
                ltr_tmp[ltr_idx++].msb = delta_poc_msb_present_flag;
             }
          }
-         if (sps->sps_temporal_mvp_enabled_flag)
-            vl_rbsp_u(&rbsp, 1); /* temporal_mvp_enable */
       }
+      if (sps->sps_temporal_mvp_enabled_flag)
+         vl_rbsp_u(&rbsp, 1); /* slice_temporal_mvp_enabled_flag */
    }
 
    /* We don't know how many SPS LTRs are used, but we do know how many LTRs

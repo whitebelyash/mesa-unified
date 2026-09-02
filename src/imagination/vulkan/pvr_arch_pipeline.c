@@ -1023,7 +1023,7 @@ static VkResult pvr_compute_pipeline_compile(
       goto err_free_build_context;
 
    pvr_early_init_shader_data(&shader_data, nir, pCreateInfo);
-   pco_preprocess_nir(pco_ctx, nir);
+   pco_preprocess_nir(pco_ctx, nir, &shader_data);
    pvr_preprocess_shader_data(&shader_data,
                               nir,
                               pCreateInfo,
@@ -2936,7 +2936,7 @@ pvr_graphics_pipeline_compile(struct pvr_device *const device,
       pvr_early_init_shader_data(&shader_data[stage],
                                  nir_shaders[stage],
                                  pCreateInfo);
-      pco_preprocess_nir(pco_ctx, nir_shaders[stage]);
+      pco_preprocess_nir(pco_ctx, nir_shaders[stage], &shader_data[stage]);
    }
 
    for (mesa_shader_stage stage = 0; stage < MESA_SHADER_STAGES; ++stage) {

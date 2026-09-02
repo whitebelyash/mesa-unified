@@ -1898,7 +1898,6 @@ struct dgc_vbo_info {
    nir_def *stride;
 
    nir_def *attrib_end;
-   nir_def *attrib_index_offset;
 
    nir_def *non_trivial_format;
 };
@@ -1951,11 +1950,8 @@ dgc_write_vertex_descriptor(struct dgc_cmdbuf *cs, const struct dgc_vbo_info *vb
       }
       nir_push_else(b, NULL);
       {
-         nir_def *r = nir_iadd(
-            b,
-            nir_iadd_imm(
-               b, nir_udiv(b, nir_isub(b, nir_load_var(b, num_records), vbo_info->attrib_end), vbo_info->stride), 1),
-            vbo_info->attrib_index_offset);
+         nir_def *r = nir_iadd_imm(
+            b, nir_udiv(b, nir_isub(b, nir_load_var(b, num_records), vbo_info->attrib_end), vbo_info->stride), 1);
          nir_store_var(b, num_records, r, 0x1);
       }
       nir_pop_if(b, NULL);
@@ -2089,7 +2085,6 @@ dgc_emit_vertex_buffer(struct dgc_cmdbuf *cs, nir_def *stream_addr)
       }
       nir_pop_if(b, NULL);
 
-      nir_def *attrib_index_offset = load_vbo_metadata32(cs, cur_idx, attrib_index_offset);
       nir_def *non_trivial_format = load_vbo_metadata32(cs, cur_idx, non_trivial_format);
       nir_def *attrib_offset = load_vbo_metadata32(cs, cur_idx, attrib_offset);
       nir_def *attrib_format_size = load_vbo_metadata32(cs, cur_idx, attrib_format_size);
@@ -2104,7 +2099,6 @@ dgc_emit_vertex_buffer(struct dgc_cmdbuf *cs, nir_def *stream_addr)
          .size = nir_load_var(b, size_var),
          .stride = nir_load_var(b, stride_var),
          .attrib_end = attrib_end,
-         .attrib_index_offset = attrib_index_offset,
          .non_trivial_format = non_trivial_format,
       };
 

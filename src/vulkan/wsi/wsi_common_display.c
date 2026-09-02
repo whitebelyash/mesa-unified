@@ -296,15 +296,10 @@ wsi_display_parse_edid(struct wsi_display_connector *connector, drmModePropertyB
 
    char *make = di_info_get_make(info);
    char *model = di_info_get_model(info);
-   if (make && model) {
-      /* Free the previous display name in case the EDID is parsed more than
-       * once.
-       */
-      vk_free(connector->wsi->alloc, metadata->display_name);
-
+   /* Per the spec, the name lives as long as the display, so allocate once. */
+   if (make && model && !metadata->display_name) {
       /* make + space + model + null terminator */
       int display_name_size = strlen(make) + strlen(model) + 2;
-      /* Per the spec, this string remains valid for the lifetime of the VkDisplayKHR. */
       metadata->display_name = vk_zalloc(connector->wsi->alloc,
             display_name_size, 8,
             VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);

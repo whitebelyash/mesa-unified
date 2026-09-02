@@ -792,7 +792,7 @@ tu_calc_tile_config(struct tu_cmd_buffer *cmd, const struct tu_vsc_config *vsc,
        vsc->tile_count.width * vsc->tile_count.height <= TU_SUBSAMPLED_MAX_BINS) {
       tu_calc_subsampled(tiles, cmd->device->physical_device,
                          cmd->state.tiling, cmd->state.framebuffer,
-                         vsc, fdm_offsets);
+                         vsc, cmd->state.rp.shared_viewport ? NULL : fdm_offsets);
    }
 
    return tiles;

@@ -36,7 +36,6 @@
 #include "wsi_common_entrypoints.h"
 #include "wsi_common_private.h"
 
-#define D3D12_IGNORE_SDK_LAYERS
 #include <dxgi1_4.h>
 #include <directx/d3d12.h>
 #include <dxguids/dxguids.h>

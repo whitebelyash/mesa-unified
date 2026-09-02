@@ -107,11 +107,6 @@ spec@arb_sample_shading@samplemask 8 all@noms partition,Fail
 spec@arb_sample_shading@samplemask 8 all@sample mask_in_one,Fail
 spec@arb_shader_texture_lod@execution@arb_shader_texture_lod-texgrad,Fail
 
-# https://gitlab.freedesktop.org/mesa/mesa/-/issues/14988
-spec@egl 1.4@eglcreatepbuffersurface and then glclear,Crash
-spec@egl 1.4@largest possible eglcreatepbuffersurface and then glclear,Crash
-spec@egl_nok_texture_from_pixmap@basic,Crash
-
 spec@egl 1.4@eglterminate then unbind context,Fail
 spec@egl_khr_gl_image@egl_khr_gl_renderbuffer_image-clear-shared-image gl_depth_component24,Fail
 spec@egl_khr_surfaceless_context@viewport,Fail
@@ -150,6 +145,9 @@ spec@ext_transform_feedback@tessellation quad_strip wireframe,Fail
 glx@glx-make-current,Fail
 spec@khr_texture_compression_astc@sliced-3d-miptree-gles srgb-fp,Fail
 spec@khr_texture_compression_astc@sliced-3d-miptree-gles srgb-fp@sRGB decode full precision,Fail
+
+# New failures after freedesktop gitlab-runner update from bookworm to trixie
+spec@ext_image_dma_buf_import@ext_image_dma_buf_import-transcode-nv12-as-r8-gr88,Fail
 
 # EGL
 wayland-dEQP-EGL.functional.resize.surface_size.grow,Fail

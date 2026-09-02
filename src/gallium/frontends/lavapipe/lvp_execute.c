@@ -381,6 +381,14 @@ update_pcbuf(struct rendering_state *state, mesa_shader_stage pstage,
 
 static void emit_compute_state(struct rendering_state *state)
 {
+   struct lvp_shader *shader = state->shaders[MESA_SHADER_COMPUTE];
+
+   memset(&state->dispatch_info, 0, sizeof(state->dispatch_info));
+
+   if (!shader)
+      return;
+
+   state->has_pcbuf[MESA_SHADER_COMPUTE] = shader->push_constant_size > 0;
    if (state->pcbuf_dirty[MESA_SHADER_COMPUTE] && state->has_pcbuf[MESA_SHADER_COMPUTE])
       update_pcbuf(state, MESA_SHADER_COMPUTE, MESA_SHADER_COMPUTE);
 
@@ -393,6 +401,11 @@ static void emit_compute_state(struct rendering_state *state)
 
    if (state->compute_shader_dirty)
       state->pctx->bind_compute_state(state->pctx, state->shaders[MESA_SHADER_COMPUTE]->shader_cso);
+
+
+   state->dispatch_info.block[0] = shader->pipeline_nir->nir->info.workgroup_size[0];
+   state->dispatch_info.block[1] = shader->pipeline_nir->nir->info.workgroup_size[1];
+   state->dispatch_info.block[2] = shader->pipeline_nir->nir->info.workgroup_size[2];
 
    state->compute_shader_dirty = false;
 
@@ -692,11 +705,6 @@ handle_compute_shader(struct rendering_state *state, struct lvp_shader *shader)
 {
    state->shaders[MESA_SHADER_COMPUTE] = shader;
 
-   state->has_pcbuf[MESA_SHADER_COMPUTE] = shader->push_constant_size > 0;
-
-   state->dispatch_info.block[0] = shader->pipeline_nir->nir->info.workgroup_size[0];
-   state->dispatch_info.block[1] = shader->pipeline_nir->nir->info.workgroup_size[1];
-   state->dispatch_info.block[2] = shader->pipeline_nir->nir->info.workgroup_size[2];
    state->compute_shader_dirty = true;
 
    if (shader->heaps && shader->embedded_samplers)
@@ -4467,20 +4475,18 @@ handle_shaders(struct vk_cmd_queue_entry *cmd, struct rendering_state *state)
 static void handle_draw_mesh_tasks(struct vk_cmd_queue_entry *cmd,
                                    struct rendering_state *state)
 {
+   memset(&state->dispatch_info, 0, sizeof(state->dispatch_info));
    state->dispatch_info.grid[0] = cmd->u.draw_mesh_tasks_ext.group_count_x;
    state->dispatch_info.grid[1] = cmd->u.draw_mesh_tasks_ext.group_count_y;
    state->dispatch_info.grid[2] = cmd->u.draw_mesh_tasks_ext.group_count_z;
-   state->dispatch_info.grid_base[0] = 0;
-   state->dispatch_info.grid_base[1] = 0;
-   state->dispatch_info.grid_base[2] = 0;
    state->dispatch_info.draw_count = 1;
-   state->dispatch_info.indirect = NULL;
    state->pctx->draw_mesh_tasks(state->pctx, &state->dispatch_info);
 }
 
 static void handle_draw_mesh_tasks_indirect(struct vk_cmd_queue_entry *cmd,
                                             struct rendering_state *state)
 {
+   memset(&state->dispatch_info, 0, sizeof(state->dispatch_info));
    state->dispatch_info.indirect = lvp_buffer_from_handle(cmd->u.draw_mesh_tasks_indirect_ext.buffer)->bo;
    state->dispatch_info.indirect_offset = cmd->u.draw_mesh_tasks_indirect_ext.offset;
    state->dispatch_info.indirect_stride = cmd->u.draw_mesh_tasks_indirect_ext.stride;
@@ -4491,6 +4497,7 @@ static void handle_draw_mesh_tasks_indirect(struct vk_cmd_queue_entry *cmd,
 static void handle_draw_mesh_tasks_indirect2(struct vk_cmd_queue_entry *cmd,
                                              struct rendering_state *state)
 {
+   memset(&state->dispatch_info, 0, sizeof(state->dispatch_info));
    state->dispatch_info.indirect = get_bda_internal_resource(state, cmd->u.draw_mesh_tasks_indirect2_ext.info->addressRange.address, &state->dispatch_info.indirect_offset);
    state->dispatch_info.indirect_stride = cmd->u.draw_mesh_tasks_indirect2_ext.info->addressRange.stride;
    state->dispatch_info.draw_count = cmd->u.draw_mesh_tasks_indirect2_ext.info->drawCount;
@@ -4500,6 +4507,7 @@ static void handle_draw_mesh_tasks_indirect2(struct vk_cmd_queue_entry *cmd,
 static void handle_draw_mesh_tasks_indirect_count(struct vk_cmd_queue_entry *cmd,
                                                   struct rendering_state *state)
 {
+   memset(&state->dispatch_info, 0, sizeof(state->dispatch_info));
    state->dispatch_info.indirect = lvp_buffer_from_handle(cmd->u.draw_mesh_tasks_indirect_count_ext.buffer)->bo;
    state->dispatch_info.indirect_offset = cmd->u.draw_mesh_tasks_indirect_count_ext.offset;
    state->dispatch_info.indirect_stride = cmd->u.draw_mesh_tasks_indirect_count_ext.stride;
@@ -4512,6 +4520,7 @@ static void handle_draw_mesh_tasks_indirect_count(struct vk_cmd_queue_entry *cmd
 static void handle_draw_mesh_tasks_indirect_count2(struct vk_cmd_queue_entry *cmd,
                                                    struct rendering_state *state)
 {
+   memset(&state->dispatch_info, 0, sizeof(state->dispatch_info));
    state->dispatch_info.indirect = get_bda_internal_resource(state, cmd->u.draw_mesh_tasks_indirect_count2_ext.info->addressRange.address, &state->dispatch_info.indirect_offset);
    state->dispatch_info.indirect_stride = cmd->u.draw_mesh_tasks_indirect_count2_ext.info->addressRange.stride;
    state->dispatch_info.draw_count = cmd->u.draw_mesh_tasks_indirect_count2_ext.info->maxDrawCount;
@@ -5284,10 +5293,6 @@ handle_dispatch_unaligned(struct vk_cmd_queue_entry *cmd, struct rendering_state
    state->dispatch_info.grid[0] = cmd->u.dispatch.group_count_x / last_block_size;
    state->dispatch_info.grid[1] = 1;
    state->dispatch_info.grid[2] = 1;
-   state->dispatch_info.grid_base[0] = 0;
-   state->dispatch_info.grid_base[1] = 0;
-   state->dispatch_info.grid_base[2] = 0;
-   state->dispatch_info.indirect = NULL;
    state->pctx->launch_grid(state->pctx, &state->dispatch_info);
 
    if (cmd->u.dispatch.group_count_x % last_block_size) {

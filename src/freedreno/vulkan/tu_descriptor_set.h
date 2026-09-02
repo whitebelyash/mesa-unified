@@ -426,7 +426,8 @@ static inline void
 tu_desc_set_tex_line_offset(uint32_t *desc, uint32_t tex_line_offset)
 {
    if (CHIP >= A8XX) {
-      desc[6] = pkt_field_set(A8XX_TEX_MEMOBJ_6_TEX_LINE_OFFSET, desc[6], tex_line_offset);
+      /* TEX_LINE_OFFSET is in bits */
+      desc[6] = pkt_field_set(A8XX_TEX_MEMOBJ_6_TEX_LINE_OFFSET, desc[6], tex_line_offset * 8);
    } else {
       desc[2] = pkt_field_set(A6XX_TEX_MEMOBJ_2_PITCH, desc[2], tex_line_offset);
    }

@@ -146,8 +146,9 @@ emit_src(struct nvfx_fpc *fpc, int pos, struct nvfx_src src)
    if (src.negate)
       sr |= NVFX_FP_REG_NEGATE;
 
+   /* SRC0 keeps its abs bit above the CC fields, SRC1/SRC2 at bit 18. */
    if (src.abs)
-      hw[1] |= (1u << (29 + pos));
+      sr |= (pos == 0) ? NVFX_FP_OP_SRC0_ABS : NVFX_FP_OP_SRC1_ABS;
 
    sr |= ((src.swz[0] << NVFX_FP_REG_SWZ_X_SHIFT) |
           (src.swz[1] << NVFX_FP_REG_SWZ_Y_SHIFT) |
