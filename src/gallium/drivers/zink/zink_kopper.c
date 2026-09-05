@@ -348,8 +348,11 @@ kopper_CreateSwapchain(struct zink_screen *screen, struct kopper_displaytarget *
       int32_t hint = cdt->info.transform_hint;
       VkSurfaceTransformFlagBitsKHR transform = util_RotationToTransform(hint);
       ANativeWindow* window = ((VkAndroidSurfaceCreateInfoKHR*)&cdt->info.bos)->window;
-      native_window_set_buffers_transform(window, hint);
-      cswap->scci.preTransform = transform;
+      // ANW-less surfaces still can get through this branch
+      if(window) {
+         native_window_set_buffers_transform(window, hint);
+         cswap->scci.preTransform = transform;
+      }
    }
    #endif
 
