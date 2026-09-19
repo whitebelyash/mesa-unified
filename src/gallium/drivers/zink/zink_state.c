@@ -42,11 +42,12 @@ zink_create_vertex_elements_state(struct pipe_context *pctx,
                                   const struct pipe_vertex_element *elements)
 {
    struct zink_screen *screen = zink_screen(pctx->screen);
+   struct zink_context *ctx = zink_context(pctx);
    unsigned int i;
    struct zink_vertex_elements_state *ves = CALLOC_STRUCT(zink_vertex_elements_state);
    if (!ves)
       return NULL;
-   ves->hw_state.hash = _mesa_hash_pointer(ves);
+   ves->hw_state.id = ++ctx->vertex_element_state_counter;
 
    int buffer_map[PIPE_MAX_ATTRIBS];
    for (int j = 0; j < ARRAY_SIZE(buffer_map); ++j)
@@ -280,10 +281,11 @@ static void *
 zink_create_blend_state(struct pipe_context *pctx,
                         const struct pipe_blend_state *blend_state)
 {
+   struct zink_context *ctx = zink_context(pctx);
    struct zink_blend_state *cso = CALLOC_STRUCT(zink_blend_state);
    if (!cso)
       return NULL;
-   cso->hash = _mesa_hash_pointer(cso);
+   cso->id = ++ctx->blend_state_counter;
 
    if (blend_state->logicop_enable) {
       cso->logicop_enable = VK_TRUE;
@@ -359,7 +361,7 @@ zink_bind_blend_state(struct pipe_context *pctx, void *cso)
    if (state->blend_state != cso) {
       state->blend_state = cso;
       if (!screen->have_full_ds3) {
-         state->blend_id = blend ? blend->hash : 0;
+         state->blend_id = blend ? blend->id : 0;
          state->dirty = true;
       }
       bool force_dual_color_blend = screen->driconf.dual_color_blend_by_location &&

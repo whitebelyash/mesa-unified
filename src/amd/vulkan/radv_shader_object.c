@@ -159,6 +159,26 @@ radv_shader_stage_init(const VkShaderCreateInfoEXT *sinfo, struct radv_shader_st
    if (out_stage->stage == MESA_SHADER_MESH) {
       out_stage->key.has_task_shader = !(sinfo->flags & VK_SHADER_CREATE_NO_TASK_SHADER_BIT_EXT);
    }
+
+   VkPipelineShaderStageCreateInfo pipeline_info = {0};
+   VkShaderModuleCreateInfo minfo = {0};
+   VkShaderDescriptorSetAndBindingMappingInfoEXT pipeline_mapping = {0};
+   pipeline_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+   pipeline_info.pNext = &minfo;
+   pipeline_info.stage = sinfo->stage;
+   pipeline_info.pName = sinfo->pName;
+   pipeline_info.pSpecializationInfo = sinfo->pSpecializationInfo;
+   minfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+   if (sinfo->codeType == VK_SHADER_CODE_TYPE_SPIRV_EXT) {
+      minfo.codeSize = sinfo->codeSize;
+      minfo.pCode = sinfo->pCode;
+   }
+   if (mapping) {
+      minfo.pNext = &pipeline_mapping;
+      pipeline_mapping = *mapping;
+      pipeline_mapping.pNext = NULL;
+   }
+   vk_pipeline_hash_shader_stage(0, &pipeline_info, NULL, out_stage->shader_blake3);
 }
 
 static VkResult

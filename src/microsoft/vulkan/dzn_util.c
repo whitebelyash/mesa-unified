@@ -23,16 +23,9 @@
 
 #include "dzn_private.h"
 
-#define D3D12_IGNORE_SDK_LAYERS
-#define COBJMACROS
-#include <directx/d3d12.h>
-
-#include <vulkan/vulkan.h>
-
 #include "util/format/u_format.h"
 #include "util/log.h"
 
-#include <directx/d3d12sdklayers.h>
 #include <util/u_dl.h>
 
 static const DXGI_FORMAT formats[PIPE_FORMAT_COUNT] = {

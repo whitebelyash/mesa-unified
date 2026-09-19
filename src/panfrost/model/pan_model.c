@@ -100,9 +100,9 @@ const struct pan_model pan_model_list[] = {
                                               MODEL_RATES_X(4, 8, 16,  64,  64, 16)),
 
    FIFTHGEN_MODEL(PAN_PROD_ID(12, 8, 0), 4, "G720",  "G720", MODEL_ANISO(ALL),  MODEL_TB_SIZES(65536, 32768),
-                                              MODEL_RATES_X(4, 8, 32,  64, 128, 8)),
+                                              MODEL_RATES_X(4, 8, 32,  64, 128, 16)),
    FIFTHGEN_MODEL(PAN_PROD_ID(13, 8, 0), 4, "G725",  "G725", MODEL_ANISO(ALL),  MODEL_TB_SIZES(65536, 65536),
-                                              MODEL_RATES_X(4, 8, 32, 128, 128, 8)),
+                                              MODEL_RATES_X(4, 8, 32, 128, 128, 16)),
    FIFTHGEN_MODEL(PAN_PROD_ID(14, 8, 0), 4, "G1-Ultra",  "G1", MODEL_ANISO(ALL),  MODEL_TB_SIZES(65536, 65536),
                                               MODEL_RATES(4, 8, 128)),
    FIFTHGEN_MODEL(PAN_PROD_ID(14, 8, 1), 4, "G1-Premium",  "G1", MODEL_ANISO(ALL),  MODEL_TB_SIZES(65536, 65536),

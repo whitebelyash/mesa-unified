@@ -870,9 +870,23 @@ cull_primitive_accepted(nir_builder *b, void *state)
 
    nir_store_var(b, s->gs_accepted_var, nir_imm_true(b), 0x1u);
 
-   /* Store the accepted state to LDS for ES threads */
-   for (unsigned vtx = 0; vtx < s->options->num_vertices_per_primitive; ++vtx)
-      nir_store_shared(b, nir_imm_intN_t(b, 1, 8), s->vtx_addr[vtx], .base = lds_es_vertex_accepted);
+   /* Store the accepted state to LDS for ES threads.
+    * The accepted state is a 1-bit flag in the per-vertex structure,
+    * but the full byte is reserved for this flag.
+    *
+    * On Navi 10, we've seen power management related GPU hangs
+    * which are fixed by using an atomic OR instead, see:
+    * https://gitlab.freedesktop.org/mesa/mesa/-/work_items/15926
+    * although it shouldn't be necessary to use atomics here.
+    */
+   for (unsigned vtx = 0; vtx < s->options->num_vertices_per_primitive; ++vtx) {
+      if (s->ac->gfx_level >= GFX10_3)
+         nir_store_shared(b, nir_imm_intN_t(b, 1, 8), s->vtx_addr[vtx], .base = lds_es_vertex_accepted);
+      else
+         nir_shared_atomic(b, 32, s->vtx_addr[vtx], nir_imm_int(b, 1),
+                           .base = lds_es_vertex_accepted,
+                           .atomic_op = nir_atomic_op_ior);
+   }
 }
 
 static void

@@ -276,16 +276,20 @@ translate_ts_format(enum pipe_format fmt)
 
 /* formats directly supported in the RS engine */
 static inline uint32_t
-translate_rs_format(enum pipe_format fmt)
+translate_rs_format(enum pipe_format fmt, bool halti5)
 {
    fmt = translate_emulated_format_z32f(fmt);
 
    /* Note: Pipe format convention is LSB to MSB, VIVS is MSB to LSB */
    switch (fmt) {
    case PIPE_FORMAT_Z16_UNORM:
+      if (!halti5)
+         return ETNA_NO_MATCH;
       return RS_FORMAT_D16;
    case PIPE_FORMAT_X8Z24_UNORM:
    case PIPE_FORMAT_S8_UINT_Z24_UNORM:
+      if (!halti5)
+         return ETNA_NO_MATCH;
       return RS_FORMAT_D32;
    case PIPE_FORMAT_S8_UINT:
       return RS_FORMAT_S8;

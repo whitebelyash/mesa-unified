@@ -327,13 +327,7 @@ lower_cmat_load_store(nir_builder *b, nir_intrinsic_instr *intr, const lower_cma
 
       /* Convert buffer deref to a global one. */
       if (nir_deref_mode_is_one_of(deref, nir_var_mem_ssbo | nir_var_mem_ubo)) {
-         nir_def *descriptor = nir_ssbo_descriptor_amd(b, &deref->def);
-         nir_def *addr_lo = nir_channel(b, descriptor, 0);
-         nir_def *addr_hi = nir_extract_i16(b, nir_channel(b, descriptor, 1), nir_imm_int(b, 0));
-         nir_def *addr = nir_pack_64_2x32_split(b, addr_lo, addr_hi);
-
-         nir_def *offset = nir_channel(b, &deref->def, 2);
-         addr = nir_iadd_nuw(b, addr, nir_u2u64(b, offset));
+         nir_def *addr = nir_deref_buffer_address(b, 1, 64, &deref->def);
          deref = nir_build_deref_cast(b, addr, nir_var_mem_global, deref->type, elem_bits / 8);
       }
 

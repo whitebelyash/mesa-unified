@@ -622,9 +622,7 @@ fd_init_screen_caps(struct fd_screen *screen)
       (is_a5xx(screen) ? 0 : 1);
 
    /* Stream output. */
-   caps->max_vertex_streams =
-      (is_a6xx(screen) && !screen->info->props.is_a702) ?  /* has SO + GS */
-         PIPE_MAX_SO_BUFFERS : 0;
+   caps->max_vertex_streams = screen->info->props.num_xfb_streams;
    caps->max_stream_output_buffers = is_ir3(screen) ? PIPE_MAX_SO_BUFFERS : 0;
    caps->stream_output_pause_resume =
    caps->stream_output_interleave_buffers =

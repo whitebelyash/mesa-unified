@@ -471,10 +471,10 @@ st_get_sampler_view_format(const struct st_context *st,
       format = PIPE_FORMAT_R8G8_UNORM;
       break;
    case PIPE_FORMAT_AYUV:
-      format = PIPE_FORMAT_RGBA8888_UNORM;
+      format = PIPE_FORMAT_R8G8B8A8_UNORM;
       break;
    case PIPE_FORMAT_XYUV:
-      format = PIPE_FORMAT_RGBX8888_UNORM;
+      format = PIPE_FORMAT_R8G8B8X8_UNORM;
       break;
    default:
       break;

@@ -40,11 +40,11 @@
  */
 #define STAT_COUNT ((__COUNTER_REG(A6XX, CSINVOCATIONS) - __COUNTER_REG(A6XX, IAVERTICES)) / 2 + 1)
 
-struct PACKED query_slot {
-   uint64_t available;
-};
+struct alignas(8) query_slot {
+   alignas(8) uint64_t available;
+} PACKED;
 
-struct PACKED occlusion_query_slot {
+struct alignas(8) occlusion_query_slot {
    struct query_slot common;
    uint64_t _padding0;
 
@@ -52,26 +52,26 @@ struct PACKED occlusion_query_slot {
    uint64_t result;
    uint64_t end;
    uint64_t _padding1;
-};
+} PACKED;
 
-struct PACKED timestamp_query_slot {
+struct alignas(8) timestamp_query_slot {
    struct query_slot common;
    uint64_t result;
-};
+} PACKED;
 
-struct PACKED primitive_slot_value {
+struct alignas(8) primitive_slot_value {
    uint64_t values[2];
-};
+} PACKED;
 
-struct PACKED pipeline_stat_query_slot {
+struct alignas(8) pipeline_stat_query_slot {
    struct query_slot common;
    uint64_t results[STAT_COUNT];
 
    uint64_t begin[STAT_COUNT];
    uint64_t end[STAT_COUNT];
-};
+} PACKED;
 
-struct PACKED primitive_query_slot {
+struct alignas(8) primitive_query_slot {
    struct query_slot common;
    /* The result of transform feedback queries is two integer values:
     *   results[0] is the count of primitives written,
@@ -85,30 +85,30 @@ struct PACKED primitive_query_slot {
 
    struct primitive_slot_value begin[4];
    struct primitive_slot_value end[4];
-};
+} PACKED;
 
-struct PACKED perfcntr_query_slot {
+struct alignas(8) perfcntr_query_slot {
    uint64_t result;
    uint64_t begin;
    uint64_t end;
-};
+} PACKED;
 
-struct PACKED perf_query_raw_slot {
+struct alignas(8) perf_query_raw_slot {
    struct query_slot common;
    struct perfcntr_query_slot perfcntr;
-};
+} PACKED;
 
-struct PACKED primitives_generated_query_slot {
+struct alignas(8) primitives_generated_query_slot {
    struct query_slot common;
    uint64_t result;
    uint64_t begin;
    uint64_t end;
-};
+} PACKED;
 
-struct PACKED accel_struct_slot {
+struct alignas(8) accel_struct_slot {
    struct query_slot common;
    uint64_t result;
-};
+} PACKED;
 
 /* Returns the IOVA or mapped address of a given uint64_t field
  * in a given slot of a query pool. */
@@ -166,7 +166,7 @@ struct PACKED accel_struct_slot {
    (uint64_t *) ((char *) pool->bo->map + pool->query_stride * (query) +   \
                  sizeof(struct query_slot) + sizeof(type) * (i))
 
-#define query_is_available(slot) slot->available
+#define query_is_available(slot) p_atomic_read(&slot->available)
 
 static const VkPerformanceCounterUnitKHR
 fd_perfcntr_type_to_vk_unit[] = {
@@ -884,6 +884,9 @@ emit_copy_query_pool_results(struct tu_cmd_buffer *cmdbuf,
                               result_count /* offset */, flags);
       }
    }
+
+   /* Make sure the result of this copy is visible to others. */
+   tu_flush_for_access(&cmdbuf->state.cache, TU_ACCESS_CP_WRITE, TU_ACCESS_NONE);
 }
 
 template <chip CHIP>
@@ -1008,6 +1011,7 @@ tu_CmdResetQueryPool(VkCommandBuffer commandBuffer,
 }
 TU_GENX(tu_CmdResetQueryPool);
 
+template <chip CHIP>
 VKAPI_ATTR void VKAPI_CALL
 tu_ResetQueryPool(VkDevice device,
                   VkQueryPool queryPool,
@@ -1019,11 +1023,15 @@ tu_ResetQueryPool(VkDevice device,
    for (uint32_t i = 0; i < queryCount; i++) {
       struct query_slot *slot = slot_address(pool, i + firstQuery);
       slot->available = 0;
+      uint32_t statistics = pool->vk.pipeline_statistics;
 
       for (uint32_t k = 0; k < get_result_count(pool); k++) {
          uint64_t *res;
 
-         if (is_perf_query_raw(pool)) {
+         if (pool->vk.query_type == VK_QUERY_TYPE_PIPELINE_STATISTICS) {
+            uint32_t stat_idx = statistics_index<CHIP>(&statistics);
+            res = query_result_addr(pool, i + firstQuery, uint64_t, stat_idx);
+         } else if (is_perf_query_raw(pool)) {
             res = query_result_addr(pool, i + firstQuery,
                                     struct perfcntr_query_slot, k);
          } else if (pool->vk.query_type == VK_QUERY_TYPE_OCCLUSION) {
@@ -1049,6 +1057,7 @@ tu_ResetQueryPool(VkDevice device,
       }
    }
 }
+TU_GENX(tu_ResetQueryPool);
 
 template <chip CHIP>
 static void
@@ -1927,6 +1936,8 @@ emit_end_xfb_query(struct tu_cmd_buffer *cmdbuf,
    tu_cs_emit_qw(cs, result_generated_iova);
    tu_cs_emit_qw(cs, end_generated_iova);
    tu_cs_emit_qw(cs, begin_generated_iova);
+
+   tu_cs_emit_pkt7(cs, CP_WAIT_MEM_WRITES, 0);
 
    /* Set the availability to 1 */
    tu_cs_emit_pkt7(cs, CP_MEM_WRITE, 4);

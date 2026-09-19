@@ -268,6 +268,15 @@ get_device_heaps(struct panvk_physical_device *device,
       };
    }
 
+   assert(device->memory.type_count < ARRAY_SIZE(device->memory.types));
+   host_coherent_not_cached_idx = device->memory.type_count;
+   device->memory.types[device->memory.type_count++] = (VkMemoryType){
+      .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+      .heapIndex = 0,
+   };
+
    if (!PANVK_DEBUG(NO_WB_MMAP) &&
        (device->kmod.dev->props.supported_bo_flags & PAN_KMOD_BO_FLAG_WB_MMAP)) {
       assert(device->memory.type_count < ARRAY_SIZE(device->memory.types));
@@ -280,26 +289,18 @@ get_device_heaps(struct panvk_physical_device *device,
       };
    }
 
-   assert(device->memory.type_count < ARRAY_SIZE(device->memory.types));
-   host_coherent_not_cached_idx = device->memory.type_count;
-   device->memory.types[device->memory.type_count++] = (VkMemoryType) {
-      .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
-                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-      .heapIndex = 0,
-   };
-
    /* Ideally, we'd place HOST_CACHED first for perf reasons, but there's
     * so many broken CTS tests (missing or invalid flush/invalidate
     * calls), and so many added at each version that it gets impossible to
     * catch up. So, keep things ordered in a way that the first HOST_VISIBLE
     * type is also the one requiring no CPU cache maintenance if we're asked
-    * to.
+    * to. The cached_before_coherent debug option is left to help investigate
+    * cpu cache related perf issues.
     */
-   if (PANVK_DEBUG(COHERENT_BEFORE_CACHED) &&
+   if (PANVK_DEBUG(CACHED_BEFORE_COHERENT) &&
        host_cached_not_coherent_idx != -1 &&
        host_coherent_not_cached_idx != -1 &&
-       host_coherent_not_cached_idx > host_cached_not_coherent_idx) {
+       host_coherent_not_cached_idx < host_cached_not_coherent_idx) {
       VkMemoryType host_cached_not_coherent_type =
          device->memory.types[host_cached_not_coherent_idx];
 

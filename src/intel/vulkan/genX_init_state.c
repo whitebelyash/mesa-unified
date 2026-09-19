@@ -701,6 +701,16 @@ init_render_queue_state(struct anv_queue *queue, bool is_companion_rcs_batch)
 #endif
 
 #if GFX_VERx10 >= 125
+   /* Initialize the CPB state in case the feature is disabled at the VkDevice
+    * creation */
+   uint32_t *cpb_dws = anv_batch_emit_dwords(batch, device->isl_dev.cpb.size / 4);
+   if (cpb_dws) {
+      struct isl_cpb_emit_info cpb_info = { };
+      isl_emit_cpb_control_s(&device->isl_dev, cpb_dws, &cpb_info);
+   }
+#endif
+
+#if GFX_VERx10 >= 125
    anv_batch_emit(batch, GENX(STATE_COMPUTE_MODE), cm) {
 #if GFX_VER >= 30
       cm.EnableVariableRegisterSizeAllocation = !INTEL_DEBUG(DEBUG_NO_VRT);

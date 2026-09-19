@@ -1967,9 +1967,9 @@ endif
 if with_clc
   llvm_modules += ['coverage', 'target', 'linker', 'irreader', 'option', 'libdriver', 'lto']
   # all-targets is needed to support static linking LLVM build with multiple targets.
-  # windowsdriver is needded with LLVM>=15 and frontendhlsl is needed with LLVM>=16,
+  # windowsdriver is needded with LLVM>=15, frontendhlsl with LLVM>=16, frontenddriver with LLVM>=18 and abi with LLVM>=23,
   # but we don't know what LLVM version we are using yet
-  llvm_optional_modules += ['all-targets', 'windowsdriver', 'frontendhlsl', 'frontenddriver']
+  llvm_optional_modules += ['all-targets', 'windowsdriver', 'frontendhlsl', 'frontenddriver', 'abi']
 endif
 if draw_with_llvm
   llvm_modules += 'native'

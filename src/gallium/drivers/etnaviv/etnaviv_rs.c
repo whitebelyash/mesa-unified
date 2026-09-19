@@ -738,7 +738,7 @@ etna_try_rs_blit(struct pipe_context *pctx,
    }
 
    /* try to find a exact format match first */
-   uint32_t format = translate_rs_format(blit_info->dst.format);
+   uint32_t format = translate_rs_format(blit_info->dst.format, ctx->screen->info->halti >= 5);
    /* When not resolving MSAA, but only doing a layout conversion, we can get
     * away with a fallback format of matching size.
     */

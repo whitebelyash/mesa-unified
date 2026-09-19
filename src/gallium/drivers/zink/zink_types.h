@@ -305,7 +305,7 @@ struct zink_fence {
 /** state types */
 
 struct zink_vertex_elements_hw_state {
-   uint32_t hash;
+   uint32_t id;
    uint32_t num_bindings, num_attribs;
    /* VK_EXT_vertex_input_dynamic_state uses different types */
    union {
@@ -368,7 +368,7 @@ struct zink_rasterizer_state {
 };
 
 struct zink_blend_state {
-   uint32_t hash;
+   uint32_t id;
    unsigned num_rts;
    VkPipelineColorBlendAttachmentState attachments[PIPE_MAX_COLOR_BUFS];
 
@@ -1611,8 +1611,8 @@ struct zink_bufferview_key {
 };
 
 struct zink_buffer_view {
-   struct pipe_resource *pres;
    struct zink_bufferview_key key;
+   struct pipe_resource *pres;
    VkBufferView buffer_view;
 };
 
@@ -1985,6 +1985,9 @@ struct zink_context {
    uint32_t num_so_targets;
    struct pipe_stream_output_target *so_targets[PIPE_MAX_SO_BUFFERS];
    bool dirty_so_targets;
+
+   uint32_t blend_state_counter;
+   uint32_t vertex_element_state_counter;
 
    bool gfx_dirty;
    bool mesh_dirty;

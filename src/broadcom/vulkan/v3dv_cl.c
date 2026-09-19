@@ -24,6 +24,8 @@
 #include "v3dv_device.h"
 #include "v3dv_cmd_buffer.h"
 
+#include "broadcom/common/v3d_limits.h"
+
 /* We don't expect that the packets we use in this file change across hw
  * versions, so we just explicitly set the V3D_VERSION and include v3dx_pack
  * here
@@ -90,10 +92,12 @@ cl_alloc_bo(struct v3dv_cl *cl, uint32_t space, enum
    /* If we are growing, double the BO allocation size to reduce the number
     * of allocations with large command buffers. This has a very significant
     * impact on the number of draw calls per second reported by vkoverhead.
+    * Cap the doubling so that command buffers recording an extreme number
+    * of draws do not grow ever larger CL BOs until memory exhaustion.
     */
    space = align(space + unusable_space, devinfo->page_size);
    if (cl->bo)
-      space = MAX2(cl->bo->size * 2, space);
+      space = MAX2(MIN2(cl->bo->size * 2, V3D_CL_MAX_GROW_SIZE), space);
 
    struct v3dv_bo *bo = v3dv_bo_alloc(cl->job->device, space, "CL", true);
    if (!bo) {

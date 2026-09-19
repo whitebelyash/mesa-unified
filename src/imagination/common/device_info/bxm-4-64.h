@@ -125,7 +125,8 @@ static const struct pvr_device_info pvr_device_info_36_52_104_182 = {
 };
 
 #define PVR_DEVICE_IDENT_36_V_104_183 \
-   .device_id = 0x36104183, .series_name = "B-Series", .public_name = "BXM-4-64"
+   .device_id = 0x36104183, .series_name = "B-Series", \
+   .public_name = "BXM-4-64", .arch = PVR_DEVICE_ARCH_ROGUE
 
 static const struct pvr_device_features pvr_device_features_36_V_104_183 = {
    .has_astc = true,
@@ -168,6 +169,7 @@ static const struct pvr_device_features pvr_device_features_36_V_104_183 = {
    .has_usc_f16sop_u8 = true,
    .has_usc_itrsmp = true,
    .has_usc_itrsmp_enhanced = true,
+   .has_usc_itr_parallel_instances = true,
    .has_usc_min_output_registers_per_pix = true,
    .has_usc_pixel_partition_mask = true,
    .has_usc_slots = true,
@@ -193,6 +195,7 @@ static const struct pvr_device_features pvr_device_features_36_V_104_183 = {
    .tile_size_y = 16U,
    .tpu_parallel_instances = 4U,
    .unified_store_depth = 256U,
+   .usc_itr_parallel_instances = 16U,
    .usc_min_output_registers_per_pix = 2U,
    .usc_slots = 64U,
    .uvs_banks = 8U,
@@ -203,9 +206,6 @@ static const struct pvr_device_features pvr_device_features_36_V_104_183 = {
 
    /* Derived features. */
    .has_s8xe = true,
-   .has_usc_itr_parallel_instances = true,
-
-   .usc_itr_parallel_instances = 16U,
 };
 
 static const struct pvr_device_enhancements

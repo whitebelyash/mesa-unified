@@ -11,6 +11,7 @@
 #include "radv_tracepoints.h"
 
 #include "util/format_rgb9e5.h"
+#include "util/format_srgb.h"
 #include "vk_format.h"
 #include "vk_shader_module.h"
 
@@ -1820,6 +1821,15 @@ radv_cmd_clear_image(struct radv_cmd_buffer *cmd_buffer, struct radv_image *imag
       internal_clear_value.color = clear_value->color;
    else
       internal_clear_value.depthStencil = clear_value->depthStencil;
+
+   if (cs && vk_format_is_srgb(image->vk.format)) {
+      format = vk_format_no_srgb(image->vk.format);
+
+      for (unsigned i = 0; i < 3; i++) {
+         internal_clear_value.color.float32[i] =
+            util_format_linear_to_srgb_float(internal_clear_value.color.float32[i]);
+      }
+   }
 
    if (format == VK_FORMAT_E5B9G9R9_UFLOAT_PACK32) {
       if (cs ? !radv_is_storage_image_format_supported(pdev, format)

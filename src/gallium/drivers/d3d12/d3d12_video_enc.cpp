@@ -283,8 +283,13 @@ d3d12_video_encoder_destroy(struct pipe_video_codec *codec)
    if(pD3D12Enc->m_bPendingWorkNotFlushed){
       size_t pool_index = d3d12_video_encoder_pool_current_index(pD3D12Enc);
       d3d12_video_encoder_flush(codec);
-      d3d12_video_encoder_sync_completion(codec, pool_index, OS_TIMEOUT_INFINITE);
+      d3d12_fence_finish(pD3D12Enc->m_inflightResourcesPool[pool_index].m_CompletionFence.get(), OS_TIMEOUT_INFINITE);
    }
+
+   // Reset batches before destroying the encoder
+   // to avoid leaving command allocators in a non-reset state
+   for (uint32_t i = 0; i < pD3D12Enc->m_MaxQueueAsyncDepth; ++i)
+      (void) d3d12_video_encoder_sync_completion(codec, i, 0);
 
    if (pD3D12Enc->m_SliceHeaderRepackBuffer)
       pD3D12Enc->m_screen->resource_destroy(pD3D12Enc->m_screen, pD3D12Enc->m_SliceHeaderRepackBuffer);
@@ -2943,6 +2948,10 @@ d3d12_video_encoder_begin_frame(struct pipe_video_codec * codec,
                    (uint64_t)current_pool_index);
       d3d12_fence_finish(pD3D12Enc->m_inflightResourcesPool[current_pool_index].m_CompletionFence.get(), OS_TIMEOUT_INFINITE);
    }
+
+   // Opportunistically reset batches
+   for (uint32_t i = 0; i < pD3D12Enc->m_MaxQueueAsyncDepth; ++i)
+      (void) d3d12_video_encoder_sync_completion(codec, i, 0);
 
    if (!d3d12_video_encoder_reconfigure_session(pD3D12Enc, target, picture)) {
       debug_printf("[d3d12_video_encoder] d3d12_video_encoder_begin_frame - Failure on "

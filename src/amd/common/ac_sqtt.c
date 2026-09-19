@@ -712,18 +712,26 @@ bool ac_sqtt_update_bo_size(struct ac_sqtt *sqtt, const char *env_var_prefix)
 
    if (sqtt->buffer_size == 0) {
       char envvar[sizeof("xxxx_THREAD_TRACE_BUFFER_SIZE")];
+      const uint32_t max_size = UINT32_MAX & ~((1u << SQTT_BUFFER_ALIGN_SHIFT) - 1);
 
       sprintf(envvar, "%s_THREAD_TRACE_BUFFER_SIZE", env_var_prefix);
 
       /* Default buffer size set to 32MB per SE. */
       uint64_t s = debug_get_num_option(envvar, 32 * 1024 * 1024);
-      sqtt->buffer_size = s;
-      if ((uint64_t)sqtt->buffer_size != s) {
+
+      /* Validate before aligning (0-sized buffer hangs the GPU). */
+      if (s == 0 || s > max_size) {
          fprintf(stderr,
-                 "Invalid %s value (must be <= %u).\n",
-                 envvar, UINT32_MAX);
+                 "Invalid %s value (must be > 0 and <= %u).\n",
+                 envvar, max_size);
          return false;
       }
+
+      /* The buffer size needs to be aligned in HW regs, so align it here to
+       * do all the allocation & addressing correctly. Resizing the buffer
+       * doubles it, which preserves the alignment.
+       */
+      sqtt->buffer_size = align64(s, 1ull << SQTT_BUFFER_ALIGN_SHIFT);
 
       return true;
    }

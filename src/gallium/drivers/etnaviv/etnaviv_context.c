@@ -169,30 +169,30 @@ etna_get_fs(struct etna_context *ctx, struct etna_shader_key* const key)
     * halti < 2 has no HW shadow compare. halti >= 2 has it, but depth32f is
     * emulated as D24S8 and the float compare ref must not be clamped to the
     * D24 range, so it must compare in the shader (and not clamp the ref). */
-   if (ctx->dirty & (ETNA_DIRTY_SAMPLERS | ETNA_DIRTY_SAMPLER_VIEWS)) {
+   for (unsigned int i = 0; i < ctx->num_fragment_sampler_views; i++) {
+      if (!ctx->sampler[i] || !ctx->sampler_view[i])
+         continue;
 
-      for (unsigned int i = 0; i < ctx->num_fragment_sampler_views; i++) {
-         if (ctx->sampler[i]->compare_mode == PIPE_TEX_COMPARE_NONE)
-            continue;
+      if (ctx->sampler[i]->compare_mode == PIPE_TEX_COMPARE_NONE)
+         continue;
 
-         const bool emulated_z32f = format_is_emulated_z32f(ctx->sampler_view[i]->format);
+      const bool emulated_z32f = format_is_emulated_z32f(ctx->sampler_view[i]->format);
 
-         if (ctx->screen->info->halti >= 2 && !emulated_z32f)
-            continue;
+      if (ctx->screen->info->halti >= 2 && !emulated_z32f)
+         continue;
 
-         if (emulated_z32f)
-            key->shadow_compare_no_clamp = 1;
+      if (emulated_z32f)
+         key->shadow_compare_no_clamp = 1;
 
-         key->has_sample_tex_compare = 1;
-         key->num_texture_states = ctx->num_fragment_sampler_views;
+      key->has_sample_tex_compare = 1;
+      key->num_texture_states = ctx->num_fragment_sampler_views;
 
-         key->tex_swizzle[i].swizzle_r = ctx->sampler_view[i]->swizzle_r;
-         key->tex_swizzle[i].swizzle_g = ctx->sampler_view[i]->swizzle_g;
-         key->tex_swizzle[i].swizzle_b = ctx->sampler_view[i]->swizzle_b;
-         key->tex_swizzle[i].swizzle_a = ctx->sampler_view[i]->swizzle_a;
+      key->tex_swizzle[i].swizzle_r = ctx->sampler_view[i]->swizzle_r;
+      key->tex_swizzle[i].swizzle_g = ctx->sampler_view[i]->swizzle_g;
+      key->tex_swizzle[i].swizzle_b = ctx->sampler_view[i]->swizzle_b;
+      key->tex_swizzle[i].swizzle_a = ctx->sampler_view[i]->swizzle_a;
 
-         key->tex_compare_func[i] = ctx->sampler[i]->compare_func;
-      }
+      key->tex_compare_func[i] = ctx->sampler[i]->compare_func;
    }
 
    key->tex_is_128bit = ctx->tex_is_128bit[MESA_SHADER_FRAGMENT];
@@ -665,13 +665,18 @@ etna_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
                           (flags & PIPE_FLUSH_FENCE_FD) ? &out_fence_fd : NULL,
                           ctx->is_noop);
 
-   list_for_each_entry(struct etna_acc_query, aq, &ctx->active_acc_queries, node)
-      etna_acc_query_resume(aq, ctx);
+   if (ctx->in_fence_fd != -1) {
+      close(ctx->in_fence_fd);
+      ctx->in_fence_fd = -1;
+   }
 
    if (fence)
       *fence = etna_fence_create(pctx, out_fence_fd);
 
    _mesa_hash_table_clear(ctx->pending_resources, NULL);
+
+   list_for_each_entry(struct etna_acc_query, aq, &ctx->active_acc_queries, node)
+      etna_acc_query_resume(aq, ctx);
 
    ctx->needs_gpu_state_reset = true;
 }

@@ -135,7 +135,8 @@ static const struct pvr_device_info pvr_device_info_22_68_54_30 = {
 };
 
 #define PVR_DEVICE_IDENT_22_V_54_38 \
-   .device_id = 0x22054038, .series_name = "Rogue", .public_name = "GE8300"
+   .device_id = 0x22054038, .series_name = "Rogue", \
+   .public_name = "GE8300", .arch = PVR_DEVICE_ARCH_ROGUE
 
 static const struct pvr_device_features pvr_device_features_22_V_54_38 = {
    .has_astc = true,
@@ -168,6 +169,7 @@ static const struct pvr_device_features pvr_device_features_22_V_54_38 = {
    .has_usc_f16sop_u8 = true,
    .has_usc_itrsmp = true,
    .has_usc_itrsmp_enhanced = true,
+   .has_usc_itr_parallel_instances = true,
    .has_usc_min_output_registers_per_pix = true,
    .has_usc_slots = true,
    .has_uvs_banks = true,
@@ -190,6 +192,7 @@ static const struct pvr_device_features pvr_device_features_22_V_54_38 = {
    .tile_size_y = 16U,
    .tpu_parallel_instances = 4U,
    .unified_store_depth = 208U,
+   .usc_itr_parallel_instances = 16U,
    .usc_min_output_registers_per_pix = 2U,
    .usc_slots = 64U,
    .uvs_banks = 4U,
@@ -198,9 +201,6 @@ static const struct pvr_device_features pvr_device_features_22_V_54_38 = {
    .vdm_cam_size = 64U,
 
    .has_s8xe = true,
-   .has_usc_itr_parallel_instances = true,
-
-   .usc_itr_parallel_instances = 16U,
 };
 
 static const struct pvr_device_enhancements

@@ -80,7 +80,7 @@ merge_instructions(brw_shader &s, brw_tex_inst **txfs, unsigned count)
 
       brw_reg srcs[TEX_LOGICAL_NUM_SRCS];
       srcs[TEX_LOGICAL_SRC_SURFACE] = txfs[0]->src[TEX_LOGICAL_SRC_SURFACE];
-      srcs[TEX_LOGICAL_SRC_SAMPLER] = brw_imm_ud(0);
+      srcs[TEX_LOGICAL_SRC_SAMPLER] = txfs[0]->src[TEX_LOGICAL_SRC_SAMPLER];
       srcs[TEX_LOGICAL_SRC_PAYLOAD0] = coord;
       for (unsigned i = TEX_LOGICAL_SRC_PAYLOAD1; i < txfs[0]->sources; i++)
          srcs[i] = txfs[0]->src[i];

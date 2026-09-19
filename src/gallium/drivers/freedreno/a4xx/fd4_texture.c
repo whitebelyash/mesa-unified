@@ -151,7 +151,9 @@ fd4_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
    }
 
    if (cso->target == PIPE_BUFFER) {
-      unsigned elements = cso->u.buf.size / util_format_get_blocksize(format);
+      unsigned elements = fd_clamp_buffer_size(format, cso->u.buf.size,
+                                               A4XX_MAX_TEXEL_BUFFER_ELEMENTS_UINT) /
+                          util_format_get_blocksize(format);
 
       lvl = 0;
       so->texconst1 =

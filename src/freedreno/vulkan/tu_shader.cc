@@ -2946,6 +2946,8 @@ tu_upload_shader(struct tu_device *dev,
    /* We emit an empty VPC including streamout state in the binning draw state */
    if (binning || v->type == MESA_SHADER_GEOMETRY) {
       size += vpc_size;
+      if (safe_const)
+         size += vpc_size;
    }
 
    pthread_mutex_lock(&dev->pipeline_mutex);

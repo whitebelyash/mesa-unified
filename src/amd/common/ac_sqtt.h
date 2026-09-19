@@ -41,6 +41,7 @@ struct ac_sqtt {
    void *bo;
    uint64_t buffer_va;
    void *ptr;
+   /* Per-SE, aligned size */
    uint32_t buffer_size;
    int start_frame;
    char *trigger_file;

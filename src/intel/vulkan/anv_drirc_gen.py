@@ -246,6 +246,9 @@ def declare_options(android_version):
         B("compression_control_enabled", android_version >= 37,
           "Enable VK_EXT_image_compression_control support",
           c_name="compression_control_enabled"),
+        B("anv_always_bindless", False,
+          "Forces all descriptor sets to use the internal bindless model",
+          c_name="always_bindless"),
     ]
 
     misc_options = []

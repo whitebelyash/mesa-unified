@@ -55,6 +55,7 @@ ir_variable_refcount_entry::ir_variable_refcount_entry(ir_variable *var)
    assigned_count = 0;
    declaration = false;
    referenced_count = 0;
+   is_global = false;
 }
 
 

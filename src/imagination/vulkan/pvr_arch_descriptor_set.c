@@ -109,10 +109,13 @@ write_image_sampler(const struct pvr_descriptor_set *set,
 
    struct pvr_combined_image_sampler_descriptor image_sampler_desc = { 0 };
 
-   VK_FROM_HANDLE(pvr_sampler, info_sampler, image_info->sampler);
-   struct pvr_sampler *sampler = binding->immutable_sampler_count
-                                    ? binding->immutable_samplers[elem]
-                                    : info_sampler;
+   struct pvr_sampler *sampler;
+   if (binding->immutable_sampler_count) {
+      sampler = binding->immutable_samplers[elem];
+   } else {
+      VK_FROM_HANDLE(pvr_sampler, info_sampler, image_info->sampler);
+      sampler = info_sampler;
+   }
 
    image_sampler_desc.sampler = sampler->descriptor;
 
@@ -120,7 +123,16 @@ write_image_sampler(const struct pvr_descriptor_set *set,
       VK_FROM_HANDLE(pvr_image_view, image_view, image_info->imageView);
       image_sampler_desc.image =
          image_view->image_state[PVR_TEXTURE_STATE_SAMPLE];
-      if (image_view->sampler_words[0]) {
+
+      bool sampler_words_present = false;
+      for (unsigned i = 0; i < ROGUE_NUM_TEXSTATE_SAMPLER_WORDS; i++) {
+         if (image_view->sampler_words[i]) {
+            sampler_words_present = true;
+            break;
+         }
+      }
+
+      if (sampler_words_present) {
          for (unsigned i = 0; i < ROGUE_NUM_TEXSTATE_SAMPLER_WORDS; i++) {
             image_sampler_desc.sampler.words[i] |= image_view->sampler_words[i];
             image_sampler_desc.sampler.gather_words[i] |=

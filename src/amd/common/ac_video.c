@@ -693,13 +693,11 @@ ac_fill_video_info(struct radeon_info *info, struct ac_drm_device *dev)
          info->video_caps.dec[codec].supported &= dec_cap[i].valid;
          info->video_caps.dec[codec].max_width = dec_cap[i].max_width;
          info->video_caps.dec[codec].max_height = dec_cap[i].max_height;
-         info->video_caps.dec[codec].max_level = dec_cap[i].max_level;
       }
       if (codec < AC_VIDEO_CODEC_ENC_MAX) {
          info->video_caps.enc[codec].supported &= enc_cap[i].valid;
          info->video_caps.enc[codec].max_width = enc_cap[i].max_width;
          info->video_caps.enc[codec].max_height = enc_cap[i].max_height;
-         info->video_caps.enc[codec].max_level = enc_cap[i].max_level;
       }
    }
 }

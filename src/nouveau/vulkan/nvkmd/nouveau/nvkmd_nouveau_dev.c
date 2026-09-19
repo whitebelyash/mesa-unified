@@ -67,6 +67,9 @@ nvkmd_nouveau_dev_destroy(struct nvkmd_dev *_dev)
 {
    struct nvkmd_nouveau_dev *dev = nvkmd_nouveau_dev(_dev);
 
+   util_vma_heap_finish(&dev->heap);
+   util_vma_heap_finish(&dev->replay_heap);
+
    nouveau_ws_device_destroy(dev->ws_dev);
    FREE(dev);
 }

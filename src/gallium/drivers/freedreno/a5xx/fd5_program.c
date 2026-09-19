@@ -255,7 +255,7 @@ fd5_program_emit(struct fd_context *ctx, struct fd_ringbuffer *ring,
    uint32_t ij_regid[IJ_COUNT], vertex_regid, instance_regid, clip0_regid,
       clip1_regid;
    enum a3xx_threadsize fssz;
-   uint8_t psize_loc = ~0;
+   uint8_t psize_loc = ~0, pos_loc = 0;
    int i, j;
 
    setup_stages(emit, s);
@@ -434,6 +434,7 @@ fd5_program_emit(struct fd_context *ctx, struct fd_ringbuffer *ring,
    ir3_link_stream_out(&l, s[VS].v);
 
    /* a5xx appends pos/psize to end of the linkage map: */
+   pos_loc = l.max_loc;
    if (VALIDREG(pos_regid))
       ir3_link_add(&l, VARYING_SLOT_POS, pos_regid, 0xf, l.max_loc);
 
@@ -621,7 +622,7 @@ fd5_program_emit(struct fd_context *ctx, struct fd_ringbuffer *ring,
    }
 
    OUT_PKT4(ring, REG_A5XX_VPC_PACK, 1);
-   OUT_RING(ring, A5XX_VPC_PACK_NUMNONPOSVAR(s[FS].v->total_in) |
+   OUT_RING(ring, A5XX_VPC_PACK_NUMNONPOSVAR(pos_loc) |
                      A5XX_VPC_PACK_PSIZELOC(psize_loc));
 
    if (!emit->binning_pass) {

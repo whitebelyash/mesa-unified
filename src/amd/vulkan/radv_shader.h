@@ -157,7 +157,6 @@ struct radv_graphics_state_key {
       uint8_t vertex_attribute_formats[MAX_VERTEX_ATTRIBS];
       uint32_t vertex_attribute_bindings[MAX_VERTEX_ATTRIBS];
       uint32_t vertex_attribute_offsets[MAX_VERTEX_ATTRIBS];
-      uint32_t vertex_attribute_strides[MAX_VERTEX_ATTRIBS];
       uint8_t vertex_binding_align[MAX_VBS];
    } vi;
 

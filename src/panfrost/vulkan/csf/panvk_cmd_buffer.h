@@ -157,6 +157,14 @@ struct panvk_cs_subqueue_context {
       /* Timestamp queries that need to happen after the current rp. */
       struct cs_single_link_list ts_chain;
       struct cs_single_link_list ts_done_chain;
+      /* Fields used to pass layer count information from primary cmdbufs to
+       * secondary cmdbufs. */
+#if PAN_ARCH >= 14
+      uint32_t layer_count;
+#else
+      uint32_t td_count;
+      uint32_t last_td_fullscreen_tiler_flags;
+#endif
    } render;
    struct {
       uint32_t counter;

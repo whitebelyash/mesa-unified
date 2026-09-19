@@ -773,6 +773,7 @@ static void si_fast_clear(struct si_context *sctx, unsigned *buffers,
          /* Enable TC-compatible HTILE. */
          zstex->enable_tc_compatible_htile_next_clear = false;
          zstex->tc_compatible_htile = true;
+         zstex->stencil_clear_value[0] = 0;
 
          /* Update the framebuffer state to reflect the change. */
          sctx->framebuffer.DB_has_shader_readable_metadata = true;

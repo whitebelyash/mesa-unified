@@ -141,7 +141,8 @@ static const struct pvr_device_info pvr_device_info_4_40_2_51 = {
 };
 
 #define PVR_DEVICE_IDENT_4_V_2_58 \
-   .device_id = 0x6250, .series_name = "Rogue", .public_name = "GX6250"
+   .device_id = 0x6250, .series_name = "Rogue", \
+   .public_name = "GX6250", .arch = PVR_DEVICE_ARCH_ROGUE
 
 static const struct pvr_device_features pvr_device_features_4_V_2_58 = {
    .has_astc = true,

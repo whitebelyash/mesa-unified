@@ -46,20 +46,31 @@ unsafe impl CLInfo<cl_event_info> for cl_event {
 unsafe impl CLInfo<cl_profiling_info> for cl_event {
     fn query(&self, q: cl_profiling_info, v: CLInfoValue) -> CLResult<CLInfoRes> {
         let event = Event::ref_from_raw(*self)?;
-        if event.cmd_type == CL_COMMAND_USER {
+
+        if event.is_user() {
             // CL_PROFILING_INFO_NOT_AVAILABLE [...] if event is a user event object.
             return Err(CL_PROFILING_INFO_NOT_AVAILABLE);
         }
 
-        match *q {
-            CL_PROFILING_COMMAND_QUEUED => v.write::<cl_ulong>(event.get_time(EventTimes::Queued)),
-            CL_PROFILING_COMMAND_SUBMIT => v.write::<cl_ulong>(event.get_time(EventTimes::Submit)),
-            CL_PROFILING_COMMAND_START => v.write::<cl_ulong>(event.get_time(EventTimes::Start)),
-            CL_PROFILING_COMMAND_END => v.write::<cl_ulong>(event.get_time(EventTimes::End)),
+        let res = match *q {
+            CL_PROFILING_COMMAND_QUEUED => event.get_time(EventTimes::Queued),
+            CL_PROFILING_COMMAND_SUBMIT => event.get_time(EventTimes::Submit),
+            CL_PROFILING_COMMAND_START => event.get_time(EventTimes::Start),
+            CL_PROFILING_COMMAND_END => event.get_time(EventTimes::End),
             // For now, we treat Complete the same as End
-            CL_PROFILING_COMMAND_COMPLETE => v.write::<cl_ulong>(event.get_time(EventTimes::End)),
-            _ => Err(CL_INVALID_VALUE),
+            CL_PROFILING_COMMAND_COMPLETE => event.get_time(EventTimes::End),
+            _ => return Err(CL_INVALID_VALUE),
+        };
+
+        // We do not have a strong reference to the queue, so just error when the result is 0.
+        if event.status() != CL_COMPLETE as cl_int || res == 0 {
+            // CL_PROFILING_INFO_NOT_AVAILABLE if the CL_QUEUE_PROFILING_ENABLE flag is not set for
+            // the command-queue, if the execution status of the command identified by event is not
+            // CL_COMPLETE
+            return Err(CL_PROFILING_INFO_NOT_AVAILABLE);
         }
+
+        v.write::<cl_ulong>(res)
     }
 }
 

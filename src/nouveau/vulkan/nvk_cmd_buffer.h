@@ -278,6 +278,10 @@ VK_DEFINE_HANDLE_CASTS(nvk_cmd_buffer, vk.base, VkCommandBuffer,
 
 extern const struct vk_command_buffer_ops nvk_cmd_buffer_ops;
 
+void
+nvk_descriptor_state_fini(struct nvk_cmd_buffer *cmd,
+                          struct nvk_descriptor_state *desc);
+
 static inline struct nvk_device *
 nvk_cmd_buffer_device(struct nvk_cmd_buffer *cmd)
 {

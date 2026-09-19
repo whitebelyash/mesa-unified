@@ -504,7 +504,8 @@ ac_fill_hw_ip_info(struct radeon_info *info, const struct drm_amdgpu_info_device
       if (device_info->family == FAMILY_NV &&
             (ASICREV_IS(device_info->external_rev, NAVI10) ||
             ASICREV_IS(device_info->external_rev, NAVI12) ||
-            ASICREV_IS(device_info->external_rev, NAVI14)))
+            ASICREV_IS(device_info->external_rev, NAVI14) ||
+            ASICREV_IS(device_info->external_rev, GFX1013)))
          info->ip[AMD_IP_GFX].ver_minor = info->ip[AMD_IP_COMPUTE].ver_minor = 1;
       else if (device_info->family == FAMILY_NV ||
                device_info->family == FAMILY_VGH ||
@@ -740,6 +741,7 @@ ac_identify_chip(struct radeon_info *info, const struct drm_amdgpu_info_device *
          break;
       case FAMILY_GFX1170:
          identify_chip(GFX1170);
+         identify_chip(GFX1171);
          break;
       case FAMILY_NV4:
          if (info->ip[AMD_IP_GFX].ver_minor == 0) {

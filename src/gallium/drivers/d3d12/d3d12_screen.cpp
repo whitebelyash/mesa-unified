@@ -52,10 +52,6 @@
 
 #include "git_sha1.h"
 
-#ifndef _GAMING_XBOX
-#include <directx/d3d12sdklayers.h>
-#endif
-
 #if defined(_WIN32) && defined(_WIN64) && !defined(_GAMING_XBOX)
 #include <filesystem>
 #include <shlobj.h>

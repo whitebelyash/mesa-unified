@@ -606,6 +606,7 @@ a6xx_emit_grid(struct kernel *kernel, uint32_t grid[3],
       a6xx_backend->query_mem = fd_bo_new(
          a6xx_backend->dev,
          a6xx_backend->num_perfcntrs * sizeof(struct fd6_query_sample), 0, "query");
+      cs.attach_bo(a6xx_backend->query_mem);
 
       /* configure the performance counters to count the requested
        * countables:

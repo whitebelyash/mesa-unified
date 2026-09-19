@@ -95,8 +95,3 @@ dEQP-VK.sparse_resources.buffer.texel_buffers.sparse_residency.storage_texel_buf
 dEQP-VK.sparse_resources.buffer.texel_buffers.sparse_residency.storage_texel_buffer_sparse_read_size_2_16_r64ui,Crash
 dEQP-VK.sparse_resources.buffer.texel_buffers.sparse_residency.storage_texel_buffer_sparse_read_size_2_16_r64ui_strict,Crash
 
-# VKCTS 1.4.5.3 -> 1.4.6.1 uprev
-# deqp-vk: ../src/freedreno/vulkan/tu_knl_drm_msm.cc:1373: VkResult msm_queue_submit(tu_queue*, void*, vk_sync_wait*, uint32_t, vk_sync_signal*, uint32_t, tu_u_trace_submission_data*): Assertion `errno_ != EINVAL' failed.
-dEQP-VK.synchronization2.internally_synchronized_queues.bind_sparse_large2,Crash
-dEQP-VK.synchronization2.internally_synchronized_queues.bind_sparse_small2,Crash
-gmem-dEQP-VK.synchronization2.internally_synchronized_queues.bind_sparse_small2,Crash

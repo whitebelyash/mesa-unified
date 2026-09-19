@@ -731,10 +731,6 @@ radv_pipeline_init_vertex_input_state(const struct radv_device *device, struct r
          dynamic->vertex_input.bindings[i] = binding;
          dynamic->vertex_input.bindings_match_attrib &= binding == i;
 
-         if (state->vi->bindings[binding].stride) {
-            dynamic->vertex_input.attrib_index_offset[i] = offset / state->vi->bindings[binding].stride;
-         }
-
          if (state->vi->bindings[binding].input_rate) {
             dynamic->vertex_input.instance_rate_inputs |= BITFIELD_BIT(i);
             dynamic->vertex_input.divisors[i] = state->vi->bindings[binding].divisor;
@@ -1635,22 +1631,6 @@ radv_generate_graphics_state_key(const struct radv_compiler_info *compiler_info,
          key.vi.vertex_attribute_bindings[i] = binding;
          key.vi.vertex_attribute_offsets[i] = offset;
          key.vi.instance_rate_divisors[i] = state->vi->bindings[binding].divisor;
-
-         /* vertex_attribute_strides is only needed to workaround GFX6/7 offset>=stride checks. */
-         if (!BITSET_TEST(state->dynamic, MESA_VK_DYNAMIC_VI_BINDING_STRIDES) && compiler_info->ac->gfx_level < GFX8) {
-            /* From the Vulkan spec 1.2.157:
-             *
-             * "If the bound pipeline state object was created with the
-             * VK_DYNAMIC_STATE_VERTEX_INPUT_BINDING_STRIDE dynamic state enabled then pStrides[i]
-             * specifies the distance in bytes between two consecutive elements within the
-             * corresponding buffer. In this case the VkVertexInputBindingDescription::stride state
-             * from the pipeline state object is ignored."
-             *
-             * Make sure the vertex attribute stride is zero to avoid computing a wrong offset if
-             * it's initialized to something else than zero.
-             */
-            key.vi.vertex_attribute_strides[i] = state->vi->bindings[binding].stride;
-         }
 
          if (state->vi->bindings[binding].input_rate) {
             key.vi.instance_rate_inputs |= 1u << i;
@@ -2732,8 +2712,12 @@ radv_graphics_shaders_compile(const struct radv_compiler_info *compiler_info, st
             stages[i].nir->info.outputs_written &= ~VARYING_BIT_PRIMITIVE_SHADING_RATE;
             stages[i].nir->info.per_primitive_outputs &= ~VARYING_BIT_PRIMITIVE_SHADING_RATE;
          }
-      } else if (fs_stage && fs_stage->info.ps.disallow_force_vrs_per_vertex) {
+      } else if (fs_stage && fs_stage->info.ps.disallow_force_vrs_per_vertex && stages[i].info.force_vrs_per_vertex) {
          stages[i].info.force_vrs_per_vertex = false;
+         stages[i].info.outinfo.writes_primitive_shading_rate = false;
+
+         assert(!(stages[i].nir->info.outputs_written & ~stages[i].nir->info.per_primitive_outputs &
+                  VARYING_BIT_PRIMITIVE_SHADING_RATE));
       }
       break;
    }

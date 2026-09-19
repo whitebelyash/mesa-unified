@@ -199,12 +199,13 @@ etna_blit(struct pipe_context *pctx, const struct pipe_blit_info *blit_info)
                                       info.src.resource->nr_storage_samples,
                                       PIPE_BIND_SAMPLER_VIEW)) {
          etna_blit_stencil_fallback(pctx, &info);
-         info.mask &= ~PIPE_MASK_S;
-         if (!info.mask)
-            goto success;
       } else {
          DBG("cannot blit stencil, skipping");
       }
+
+      info.mask &= ~PIPE_MASK_S;
+      if (!info.mask)
+         goto success;
    }
 
    if (!util_blitter_is_blit_supported(ctx->blitter, &info)) {

@@ -1980,8 +1980,8 @@ static inline uint32_t xi_argument_format_for_vk_cmd(enum vk_cmd_type cmd)
 #endif
 }
 
-/* Return whether EXECUTE_INDIRECT_DRAW can unroll all the draw calls or
- * whether we need to emit the max count.
+/* Return whether EXECUTE_INDIRECT_DRAW can unroll all the draw calls (returns false)
+ * or whether we need to emit the max count (returns true).
  */
 static inline bool
 cmd_buffer_set_indirect_stride(struct anv_cmd_buffer *cmd_buffer,
@@ -2030,7 +2030,7 @@ cmd_buffer_set_indirect_stride(struct anv_cmd_buffer *cmd_buffer,
    /* Gfx20+ can accomodate any stride through programming STATE_BYTE_STRIDE,
     * ARL cannot unless indirect data is aligned.
     */
-   return GFX_VER >= 20 ? false : aligned;
+   return GFX_VER >= 20 ? false : !aligned;
 }
 
 static void

@@ -537,6 +537,7 @@ O_MOV_OFFSET = pseudo_op('mov.offset', OM_ALU + [OM_OFFSET_SD], 1, 2)
 O_VEC = pseudo_op('vec', [OM_EXEC_CND], 1, VARIABLE)
 O_COMP = pseudo_op('comp', [], 1, 2)
 O_FENCE = pseudo_op('fence')
+O_FLUSH_DMA = pseudo_op('flush.dma', [], 1, 1)
 
 O_OP_ATOMIC_OFFSET = pseudo_op('op.atomic.offset', OM_ALU_ATOMEXT + [OM_ATOM_OP], 2, 4, [], [[RM_ABS, RM_NEG], [RM_ABS, RM_NEG]])
 

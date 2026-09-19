@@ -783,6 +783,7 @@ llvmpipe_resource_from_handle(struct pipe_screen *_screen,
                                     (struct pipe_memory_allocation**)&alloc,
                                     &size, true)) {
          void *data = (char*)alloc->cpu_addr + whandle->offset;
+         whandle->size = size;
          lpr->dt = winsys->displaytarget_create_mapped(winsys, template->bind,
                                                        template->format, template->width0, template->height0,
                                                        whandle->stride, data, whandle);
@@ -792,7 +793,6 @@ llvmpipe_resource_from_handle(struct pipe_screen *_screen,
          lpr->dmabuf = true;
          lpr->tex_data = data;
          lpr->row_stride[0] = whandle->stride;
-         whandle->size = size;
       } else
 #endif
       {
@@ -1364,7 +1364,7 @@ llvmpipe_allocate_memory(struct pipe_screen *_screen, uint64_t size)
 
    mtx_unlock(&screen->mem_mutex);
 #else
-   mem->cpu_addr = malloc(mem->size);
+   mem->cpu_addr = os_malloc_aligned(mem->size, alignment);
    mem->fd = -1;
    mem->type = LLVMPIPE_MEMORY_FD_TYPE_INVALID;
 #endif

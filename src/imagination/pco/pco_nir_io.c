@@ -227,6 +227,8 @@ static bool prop_intr_access_to_vars(nir_builder *b,
 
    nir_variable *var =
       nir_get_binding_variable(b->shader, nir_chase_binding(intr->src[0]));
+   if (!var)
+      return false;
 
    enum gl_access_qualifier intr_access = nir_intrinsic_access(intr);
 

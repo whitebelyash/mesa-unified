@@ -902,9 +902,10 @@ void anv_CmdCopyMemoryToImageKHR(
       if (dst_image->emu_plane_format != VK_FORMAT_UNDEFINED) {
          assert(!anv_cmd_buffer_is_blitter_queue(cmd_buffer));
          const enum anv_pipe_bits pipe_bits =
-            anv_cmd_buffer_is_compute_queue(cmd_buffer) ?
-            ANV_PIPE_HDC_PIPELINE_FLUSH_BIT :
-            ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT;
+	    ANV_PIPE_TEXTURE_CACHE_INVALIDATE_BIT |
+            (anv_cmd_buffer_is_compute_queue(cmd_buffer) ?
+             ANV_PIPE_HDC_PIPELINE_FLUSH_BIT :
+             ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT);
          anv_add_pending_pipe_bits(cmd_buffer,
                                    (batch.flags & BLORP_BATCH_USE_COMPUTE) ?
                                    VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT :

@@ -2659,7 +2659,9 @@ calc_min_limit_pressure(struct ir3_shader_variant *v,
          /* phis and parallel copies can be deleted via spilling */
 
          if (instr->opc == OPC_META_PHI) {
-            ir3_reg_interval_insert(ctx, &intervals[instr->dsts[0]->name]);
+            /* only the GPR phis have an interval; the rest are not RA's */
+            if (ra_reg_is_dst(instr->dsts[0]))
+               ir3_reg_interval_insert(ctx, &intervals[instr->dsts[0]->name]);
             continue;
          }
 

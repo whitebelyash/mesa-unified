@@ -870,7 +870,7 @@ tu_get_features(struct tu_physical_device *pdevice,
 
    /* VK_EXT_transform_feedback */
    features->transformFeedback = true;
-   features->geometryStreams = !pdevice->info->props.is_a702;
+   features->geometryStreams = pdevice->info->props.num_xfb_streams > 1;
 
    /* VK_EXT_vertex_input_dynamic_state */
    features->vertexInputDynamicState = true;
@@ -1091,7 +1091,15 @@ tu_get_physical_device_properties_1_3(struct tu_physical_device *pdevice,
    p->maxSubgroupSize =
       pdevice->expose_double_threadsize ? pdevice->info->threadsize_base * 2 : pdevice->info->threadsize_base;
    p->maxComputeWorkgroupSubgroups = pdevice->info->max_waves;
-   p->requiredSubgroupSizeStages = VK_SHADER_STAGE_ALL;
+   /* Only compute and fragment shaders can run with a doubled wave size, the
+    * geometry stages always run at threadsize_base.  So when we expose more
+    * than one possible subgroup size we can't honor a required subgroup size
+    * in those stages.
+    */
+   p->requiredSubgroupSizeStages =
+      p->minSubgroupSize == p->maxSubgroupSize
+         ? VK_SHADER_STAGE_ALL
+         : (VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
 
    p->maxInlineUniformBlockSize = MAX_INLINE_UBO_RANGE;
    p->maxPerStageDescriptorInlineUniformBlocks = MAX_INLINE_UBOS;
@@ -1366,12 +1374,7 @@ tu_get_properties(struct tu_physical_device *pdevice,
    props->maxPushDescriptors = MAX_PUSH_DESCRIPTORS;
 
    /* VK_EXT_transform_feedback */
-   if (pdevice->info->props.is_a702) {
-       /* a702 only 32 streamout ram entries.. 1 stream, 64 components */
-      props->maxTransformFeedbackStreams = 1;
-   } else {
-      props->maxTransformFeedbackStreams = IR3_MAX_SO_STREAMS;
-   }
+   props->maxTransformFeedbackStreams = pdevice->info->props.num_xfb_streams;
    props->maxTransformFeedbackBuffers = IR3_MAX_SO_BUFFERS;
    props->maxTransformFeedbackBufferSize = UINT32_MAX;
    props->maxTransformFeedbackStreamDataSize = 512;
@@ -2200,7 +2203,7 @@ tu_GetPhysicalDeviceFragmentShadingRatesKHR(
    {                                                                                \
       VkPhysicalDeviceFragmentShadingRateKHR rate = {                               \
          .sType =                                                                   \
-            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_PROPERTIES_KHR, \
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_KHR,            \
          .sampleCounts = s,                                                         \
          .fragmentSize = { .width = w, .height = h },                               \
       };                                                                            \
@@ -3259,8 +3262,8 @@ tu_CreateDevice(VkPhysicalDevice physicalDevice,
 fail_timeline_cond:
 fail_a725_workaround:
 fail_autotune:
-   fd_perfcntr_state_free(device->perfcntrs);
    delete device->autotune;
+   fd_perfcntr_state_free(device->perfcntrs);
 fail_bin_preamble:
 fail_prepare_perfcntrs_pass_cs:
    free(device->perfcntrs_pass_cs_entries);
@@ -4474,7 +4477,7 @@ uint64_t tu_GetDeviceMemoryOpaqueCaptureAddress(
     const VkDeviceMemoryOpaqueCaptureAddressInfo* pInfo)
 {
    VK_FROM_HANDLE(tu_device_memory, mem, pInfo->memory);
-   return mem->bo->iova;
+   return mem->iova;
 }
 
 struct tu_debug_bos_entry {

@@ -895,16 +895,18 @@ radv_meta_nir_build_copy_vrs_htile_shader(enum amd_gfx_level gfx_level, uint32_t
    nir_def *coord = nir_iadd(&b, nir_imul_imm(&b, global_id, 8), offset);
 
    /* Load constants. */
-   nir_def *constants = nir_load_push_constant(&b, 3, 32, nir_imm_int(&b, 16), .range = 28);
+   nir_def *constants = nir_load_push_constant(&b, 4, 32, nir_imm_int(&b, 16), .range = 32);
    nir_def *htile_pitch = nir_channel(&b, constants, 0);
    nir_def *htile_slice_size = nir_channel(&b, constants, 1);
    nir_def *read_htile_value = nir_channel(&b, constants, 2);
+   nir_def *layer = nir_channel(&b, constants, 3);
 
    /* Get the HTILE addr from coordinates. */
    nir_def *zero = nir_imm_int(&b, 0);
    nir_def *htile_offset =
       ac_nir_htile_addr_from_coord(&b, gfx_level, gb_addr_config, &surf->u.gfx9.zs.htile_equation, htile_pitch,
-                                   htile_slice_size, nir_channel(&b, coord, 0), nir_channel(&b, coord, 1), zero, zero);
+                                   htile_slice_size, nir_channel(&b, coord, 0), nir_channel(&b, coord, 1), layer,
+                                   zero);
 
    /* Set up the input VRS image descriptor. */
    const struct glsl_type *vrs_sampler_type = glsl_sampler_type(GLSL_SAMPLER_DIM_2D, false, false, GLSL_TYPE_FLOAT);

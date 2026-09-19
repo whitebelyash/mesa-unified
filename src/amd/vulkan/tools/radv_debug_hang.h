@@ -23,6 +23,7 @@ void radv_trap_handler_finish(struct radv_device *device);
 void radv_check_trap_handler(struct radv_queue *queue);
 
 bool radv_vm_fault_occurred(struct radv_device *device, struct radv_winsys_gpuvm_fault_info *fault_info);
+bool radv_shader_abort_occurred(struct radv_device *device);
 
 ALWAYS_INLINE static bool
 radv_device_fault_detection_enabled(const struct radv_device *device)

@@ -18,6 +18,8 @@
 struct kk_buffer {
    struct vk_buffer vk;
    mtl_buffer *mtl_handle;
+   /* Offset within handle's base address */
+   uint64_t offset;
 };
 
 VK_DEFINE_NONDISP_HANDLE_CASTS(kk_buffer, vk.base, VkBuffer,
@@ -34,6 +36,12 @@ kk_buffer_addr_range(const struct kk_buffer *buffer, uint64_t offset,
       .addr = vk_buffer_address(&buffer->vk, offset),
       .range = vk_buffer_range(&buffer->vk, offset, range),
    };
+}
+
+static inline uint64_t
+kk_buffer_absolute_offset(const struct kk_buffer *buffer, uint64_t offset)
+{
+   return buffer->offset + offset;
 }
 
 static inline mtl_resource *

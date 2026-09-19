@@ -2229,7 +2229,7 @@ serialize_internal(struct blob *blob, const nir_shader *nir, bool strip, bool se
       blob_write_string(blob, info.label);
    if (!strip && info.spec)
       blob_write_string(blob, info.spec);
-   info.name = info.label = NULL;
+   info.name = info.label = info.spec = NULL;
    blob_write_bytes(blob, (uint8_t *)&info, sizeof(info));
 
    write_var_list(&ctx, &nir->variables);

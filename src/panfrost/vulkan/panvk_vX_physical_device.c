@@ -1351,26 +1351,22 @@ panvk_per_arch(get_physical_device_properties)(
       VK_IMAGE_LAYOUT_PREINITIALIZED,
       VK_IMAGE_LAYOUT_ZERO_INITIALIZED_EXT,
 
-      /* Only if vk1.1+ is supported */
-#if PAN_ARCH >= 10
-      /*  Vulkan 1.1 */
+      /*  Vulkan 1.1 or VK_KHR_maintenance2 */
       VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL,
       VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL,
 
-      /*  Vulkan 1.2 */
+      /*  Vulkan 1.2 or VK_KHR_separate_depth_stencil_layouts */
       VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
       VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
       VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL,
       VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL,
 
-      /* Vulkan 1.3 */
+      /* Vulkan 1.3 or VK_KHR_synchronization2 */
       VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
       VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
 
-      /* Vulkan 1.4 */
+      /* Vulkan 1.4 or VK_KHR_dynamic_rendering_local_read */
       VK_IMAGE_LAYOUT_RENDERING_LOCAL_READ,
-
-#endif
 
       /* VK_EXT_attachment_feedback_loop_layout */
       VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT,

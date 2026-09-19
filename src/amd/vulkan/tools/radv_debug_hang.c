@@ -936,6 +936,14 @@ radv_vm_fault_occurred(struct radv_device *device, struct radv_winsys_gpuvm_faul
    return device->ws->query_gpuvm_fault(device->ws, fault_info);
 }
 
+bool
+radv_shader_abort_occurred(struct radv_device *device)
+{
+   const uint32_t *data = device->shader_abort.buffer.map;
+   /* Check if something was written to the abort buffer. */
+   return data && data[0] != sizeof(uint32_t);
+}
+
 enum radv_device_fault_chunk {
    RADV_DEVICE_FAULT_CHUNK_TRACE,
    RADV_DEVICE_FAULT_CHUNK_QUEUE_STATE,

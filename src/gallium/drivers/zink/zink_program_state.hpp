@@ -190,9 +190,9 @@ zink_get_gfx_pipeline(struct zink_context *ctx,
                state->vertex_strides[buffer_id] = vb->buffer.resource ? state->element_state->b.strides[i] : 0;
                hash = XXH32(&state->vertex_strides[buffer_id], sizeof(uint32_t), hash);
             }
-            state->vertex_hash = hash ^ state->element_state->hash;
+            state->vertex_hash = XXH32(&state->element_state->id, sizeof(uint32_t), hash);
          } else
-            state->vertex_hash = state->element_state->hash;
+            state->vertex_hash = XXH32(&state->element_state->id, sizeof(uint32_t), 0);
          state->final_hash ^= state->vertex_hash;
       }
 

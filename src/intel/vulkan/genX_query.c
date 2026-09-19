@@ -2124,24 +2124,19 @@ genX(CmdWriteAccelerationStructuresPropertiesKHR)(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_query_pool, pool, queryPool);
 
-   /* L1/L2 caches flushes should have been dealt with by pipeline barriers.
-    * Unfortunately some platforms require L3 flush because CS (reading the
-    * dispatch parameters) is not L3 coherent.
+   /* We need a CS stall for the flushing to complete before we run the MI
+    * commands.
+    *
+    * If CS is also non coherent in L3, we need to flush L3.
     */
-   if (!ANV_DEVINFO_HAS_COHERENT_L3_CS(cmd_buffer->device->info)) {
-      anv_add_pending_pipe_bits(cmd_buffer,
-                                VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-                                VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-                                ANV_PIPE_END_OF_PIPE_SYNC_BIT |
-                                ANV_PIPE_DATA_CACHE_FLUSH_BIT,
-                                "read BVH data using CS");
-      genX(cmd_buffer_apply_pipe_flushes)(cmd_buffer);
-   }
-
-   if (append_query_clear_flush(
-          cmd_buffer, pool,
-          "CmdWriteAccelerationStructuresPropertiesKHR flush query clears"))
-      genX(cmd_buffer_apply_pipe_flushes)(cmd_buffer);
+   anv_add_pending_pipe_bits(cmd_buffer,
+                             VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                             VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                             (ANV_DEVINFO_HAS_COHERENT_L3_CS(cmd_buffer->device->info) ? 0 :
+                              ANV_PIPE_DATA_CACHE_FLUSH_BIT) |
+                             ANV_PIPE_CS_STALL_BIT,
+                             "read BVH data using CS");
+   genX(cmd_buffer_apply_pipe_flushes)(cmd_buffer);
 
    struct mi_builder b;
    mi_builder_init(&b, cmd_buffer->device->info, &cmd_buffer->batch);

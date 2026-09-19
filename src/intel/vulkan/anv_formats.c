@@ -1666,7 +1666,7 @@ anv_get_image_format_properties(
    VkTextureLODGatherFormatPropertiesAMD *texture_lod_gather_props = NULL;
    VkImageCompressionPropertiesEXT *comp_props = NULL;
    VkHostImageCopyDevicePerformanceQueryEXT *host_props = NULL;
-   bool from_wsi = false;
+   const struct wsi_image_create_info *wsi_info = NULL;
    const bool is_sparse = info->flags & VK_IMAGE_CREATE_SPARSE_BINDING_BIT;
 
    /* Extract input structs */
@@ -1685,7 +1685,7 @@ anv_get_image_format_properties(
          /* Ignore but don't warn */
          break;
       case VK_STRUCTURE_TYPE_WSI_IMAGE_CREATE_INFO_MESA:
-         from_wsi = true;
+         wsi_info = (const void *)s;
          break;
       case VK_STRUCTURE_TYPE_VIDEO_PROFILE_LIST_INFO_KHR:
          /* Ignore but don't warn */
@@ -1731,10 +1731,13 @@ anv_get_image_format_properties(
        (info->usage & VK_IMAGE_USAGE_HOST_TRANSFER_BIT_EXT))
       goto unsupported;
 
+   bool ccs_mod = false;
    if (info->tiling == VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT) {
       isl_mod_info = isl_drm_modifier_get_info(modifier_info->drmFormatModifier);
       if (isl_mod_info == NULL)
          goto unsupported;
+
+      ccs_mod = isl_drm_modifier_has_aux(isl_mod_info->modifier);
 
       /* only allow Y-tiling/Tile4 for video decode. */
       if (info->usage & VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR) {
@@ -1875,7 +1878,7 @@ anv_get_image_format_properties(
          goto unsupported;
       }
 
-      if (isl_drm_modifier_has_aux(isl_mod_info->modifier) &&
+      if (ccs_mod &&
           !anv_formats_ccs_e_compatible(physical_device, info->flags, info->format,
                                         info->tiling, format_list_info)) {
          goto unsupported;
@@ -1939,8 +1942,7 @@ anv_get_image_format_properties(
           goto unsupported;
       }
 
-      if (info->tiling == VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT &&
-          isl_drm_modifier_has_aux(isl_mod_info->modifier)) {
+      if (ccs_mod) {
          /* Rejection DISJOINT for consistency with the GL driver. In
           * eglCreateImage, we require that the dma_buf for the primary surface
           * and the dma_buf for its aux surface refer to the same bo.
@@ -1949,7 +1951,7 @@ anv_get_image_format_properties(
       }
    }
 
-   if ((info->flags & VK_IMAGE_CREATE_ALIAS_BIT) && !from_wsi) {
+   if ((info->flags & VK_IMAGE_CREATE_ALIAS_BIT) && !wsi_info) {
       /* Reject aliasing of images with non-linear DRM format modifiers because:
        *
        * 1. For modifiers with compression, we store aux tracking state in
@@ -2078,6 +2080,11 @@ anv_get_image_format_properties(
                 * interchangeable here.
                 */
                external_props->externalMemoryProperties = opaque_fd_dma_buf_props;
+               /* CCS modifiers require dedicated allocation. */
+               if (ccs_mod) {
+                  external_props->externalMemoryProperties.externalMemoryFeatures |=
+                     VK_EXTERNAL_MEMORY_FEATURE_DEDICATED_ONLY_BIT;
+               }
             } else {
                /* With an implicit memory layout, we must rely on deviceUUID
                 * and driverUUID to determine the layout. Therefore DMA_BUF is
@@ -2098,8 +2105,14 @@ anv_get_image_format_properties(
           * the image belongs too. Both OPAQUE_FD and DMA_BUF are
           * interchangeable here.
           */
-         if (external_props)
+         if (external_props) {
             external_props->externalMemoryProperties = opaque_fd_dma_buf_props;
+            /* CCS modifiers require dedicated allocation. */
+            if (ccs_mod) {
+               external_props->externalMemoryProperties.externalMemoryFeatures |=
+                  VK_EXTERNAL_MEMORY_FEATURE_DEDICATED_ONLY_BIT;
+            }
+         }
          break;
       case VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT:
          /* This memory handle has no restrictions on driverUUID nor deviceUUID,
@@ -2137,6 +2150,15 @@ anv_get_image_format_properties(
           */
          goto unsupported;
       }
+   }
+
+   /* Ensure applications query the requirement of the dedicated allocation
+    * for scanout images from WSI without a modifier. Refer to the places of
+    * 'vk.wsi_legacy_scanout' flag.
+    */
+   if (wsi_info && wsi_info->scanout && external_props) {
+      external_props->externalMemoryProperties.externalMemoryFeatures |=
+         VK_EXTERNAL_MEMORY_FEATURE_DEDICATED_ONLY_BIT;
    }
 
    const bool aux_supported =

@@ -2512,9 +2512,14 @@ resolve_ahb_image(struct anv_device *device,
       assert(isl_mod_info);
       isl_tiling_flags_t isl_tiling_flags = (1u << isl_mod_info->tiling);
 
+      const bool allow_aux = device->info->ver >= 20 &&
+                           isl_drm_modifier_has_aux(mod_explicit_info.drmFormatModifier);
+      image->vk.drm_format_mod = mod_explicit_info.drmFormatModifier;
+      image->vk.tiling = VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT;
+
       result = add_all_surfaces_explicit_layout(device, image, NULL, &mod_explicit_info,
                                                 isl_tiling_flags,
-                                                ISL_SURF_USAGE_DISABLE_AUX_BIT);
+                                                allow_aux ? 0 : ISL_SURF_USAGE_DISABLE_AUX_BIT);
    } else {
       /* Fall back to implicit layout with tiling query. */
       AHardwareBuffer_Desc desc;
@@ -2577,12 +2582,17 @@ resolve_anb_image(struct anv_device *device,
       isl_drm_modifier_get_info(mod_info.drmFormatModifier);
    assert(isl_mod_info);
 
+   const bool allow_aux = device->info->ver >= 20 &&
+                        isl_drm_modifier_has_aux(mod_info.drmFormatModifier);
+   image->vk.drm_format_mod = mod_info.drmFormatModifier;
+   image->vk.tiling = VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT;
+
    /* Now we are able to fill anv_image fields properly and create
     * isl_surface for it.
     */
    result = add_all_surfaces_implicit_layout(device, image, NULL, gralloc_info->stride,
                                              1u << isl_mod_info->tiling,
-                                             ISL_SURF_USAGE_DISABLE_AUX_BIT);
+                                             allow_aux ? 0 : ISL_SURF_USAGE_DISABLE_AUX_BIT);
    if (result != VK_SUCCESS) {
       anv_device_release_bo(device, bo);
       return vk_errorf(device, result,

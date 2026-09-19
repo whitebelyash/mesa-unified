@@ -193,7 +193,7 @@ opt_uub_minmax(nir_builder *b, nir_alu_instr *alu, opt_uub_state *state)
    if (src_uub > nir_scalar_as_uint(const_src))
       return false;
 
-   nir_scalar replacement = alu->op == nir_op_umax ? const_src : src;
+   nir_scalar replacement = op == nir_op_umax ? const_src : src;
    b->cursor = nir_after_instr(&alu->instr);
    nir_def_replace(&alu->def, nir_mov_scalar(b, replacement));
    return true;

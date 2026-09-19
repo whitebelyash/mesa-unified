@@ -429,6 +429,10 @@ ir3_nir_max_offset_shift(nir_intrinsic_instr *intr, const void *data)
 
    switch (deref->modes) {
    case nir_var_mem_ssbo:
+      /* pre-a6xx ldgb/stgb derive a byte address from this source */
+      if (compiler->gen < 6)
+         return 0;
+
       /* SSBO accesses can be up to dword shifted for 32-bit accesses. Request
        * that we always try to align up to that, so that vectorization can try
        * to build accesses across bit sizes.  We'll legalize the shift for the

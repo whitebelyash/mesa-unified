@@ -1637,7 +1637,6 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
       return;
    case SpvDecorationInputAttachmentIndex:
       vtn_var->input_attachment_index = dec->operands[0];
-      vtn_var->access |= ACCESS_NON_WRITEABLE;
       return;
    case SpvDecorationAlignment:
       var_set_alignment(b, vtn_var, dec->operands[0]);
@@ -1729,6 +1728,7 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
             vtn_var->var->members[member].location = location;
       }
 
+      vtn_var->var->data.explicit_location = true;
       return;
    } else {
       if (vtn_var->var) {

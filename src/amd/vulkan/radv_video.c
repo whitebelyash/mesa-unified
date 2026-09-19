@@ -948,18 +948,30 @@ radv_GetPhysicalDeviceVideoFormatPropertiesKHR(VkPhysicalDevice physicalDevice,
       for (uint32_t j = 0; j < num_tiling; j++) {
          vk_outarray_append_typed(VkVideoFormatPropertiesKHR, &out, p)
          {
+            VkImageCreateFlags2KHR create_flags = 0;
+            if (src_dst || qp_map)
+               create_flags |= VK_IMAGE_CREATE_2_MUTABLE_FORMAT_BIT_KHR |
+                               VK_IMAGE_CREATE_2_EXTENDED_USAGE_BIT_KHR | VK_IMAGE_CREATE_2_ALIAS_BIT_KHR;
+
             p->format = format;
             p->componentMapping.r = VK_COMPONENT_SWIZZLE_IDENTITY;
             p->componentMapping.g = VK_COMPONENT_SWIZZLE_IDENTITY;
             p->componentMapping.b = VK_COMPONENT_SWIZZLE_IDENTITY;
             p->componentMapping.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-            p->imageCreateFlags = 0;
-            if (src_dst || qp_map)
-               p->imageCreateFlags |= VK_IMAGE_CREATE_2_MUTABLE_FORMAT_BIT_KHR |
-                                      VK_IMAGE_CREATE_2_EXTENDED_USAGE_BIT_KHR | VK_IMAGE_CREATE_2_ALIAS_BIT_KHR;
+            p->imageCreateFlags = create_flags;
             p->imageType = VK_IMAGE_TYPE_2D;
             p->imageTiling = tiling[j];
             p->imageUsageFlags = usage_flags;
+
+            struct VkImageCreateFlags2CreateInfoKHR *create_flags2 =
+               vk_find_struct(p->pNext, IMAGE_CREATE_FLAGS_2_CREATE_INFO_KHR);
+            if (create_flags2)
+               create_flags2->flags = create_flags;
+
+            struct VkImageUsageFlags2CreateInfoKHR *usage_flags2 =
+               vk_find_struct(p->pNext, IMAGE_USAGE_FLAGS_2_CREATE_INFO_KHR);
+            if (usage_flags2)
+               usage_flags2->usage = usage_flags;
 
             if (qp_map) {
                struct VkVideoFormatQuantizationMapPropertiesKHR *qp_map_props =
@@ -1523,9 +1535,9 @@ get_av1_param(struct radv_video_session *vid, struct vk_video_session_parameters
       av1->quantization.delta_q_v_dc = pi->pQuantization->DeltaQVDc;
       av1->quantization.delta_q_v_ac = pi->pQuantization->DeltaQVAc;
       if (pi->pQuantization->flags.using_qmatrix) {
-         av1->quantization.qm_y = pi->pQuantization->qm_y | 0xf0;
-         av1->quantization.qm_u = pi->pQuantization->qm_u | 0xf0;
-         av1->quantization.qm_v = pi->pQuantization->qm_v | 0xf0;
+         av1->quantization.qm_y = pi->pQuantization->qm_y;
+         av1->quantization.qm_u = pi->pQuantization->qm_u;
+         av1->quantization.qm_v = pi->pQuantization->qm_v;
       } else {
          av1->quantization.qm_y = 0xff;
          av1->quantization.qm_u = 0xff;
@@ -1593,17 +1605,19 @@ get_av1_param(struct radv_video_session *vid, struct vk_video_session_parameters
    }
 
    if (pi->pTileInfo) {
+      const unsigned sb_shift = seq_hdr->flags.use_128x128_superblock ? 5 : 4;
       av1->tile_info.tile_cols = pi->pTileInfo->TileCols;
       av1->tile_info.tile_rows = pi->pTileInfo->TileRows;
       av1->tile_info.context_update_tile_id = pi->pTileInfo->context_update_tile_id;
-      for (unsigned i = 0; i < AV1_MAX_TILE_COLS + 1; ++i) {
-         const unsigned sb_shift = seq_hdr->flags.use_128x128_superblock ? 5 : 4;
+      for (unsigned i = 0; i < pi->pTileInfo->TileCols; ++i) {
          av1->tile_info.tile_col_start_sb[i] = pi->pTileInfo->pMiColStarts[i] >> sb_shift;
-         av1->tile_info.tile_row_start_sb[i] = pi->pTileInfo->pMiRowStarts[i] >> sb_shift;
+         av1->tile_info.width_in_sbs[i] = pi->pTileInfo->pWidthInSbsMinus1[i];
       }
-      memcpy(av1->tile_info.width_in_sbs, pi->pTileInfo->pWidthInSbsMinus1, sizeof(av1->tile_info.width_in_sbs));
-      memcpy(av1->tile_info.height_in_sbs, pi->pTileInfo->pHeightInSbsMinus1, sizeof(av1->tile_info.height_in_sbs));
-      for (unsigned i = 0; i < AV1_MAX_NUM_TILES; ++i) {
+      for (unsigned i = 0; i < pi->pTileInfo->TileRows; ++i) {
+         av1->tile_info.tile_row_start_sb[i] = pi->pTileInfo->pMiRowStarts[i] >> sb_shift;
+         av1->tile_info.height_in_sbs[i] = pi->pTileInfo->pHeightInSbsMinus1[i];
+      }
+      for (unsigned i = 0; i < MIN2(av1_pic_info->tileCount, AV1_MAX_NUM_TILES); ++i) {
          av1->tile_info.tile_offset[i] = av1_pic_info->pTileOffsets[i];
          av1->tile_info.tile_size[i] = av1_pic_info->pTileSizes[i];
       }

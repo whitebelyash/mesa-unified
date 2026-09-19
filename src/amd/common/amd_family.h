@@ -130,6 +130,7 @@ enum radeon_family
    CHIP_GFX1156,
    /* GFX11.7 */
    CHIP_GFX1170,
+   CHIP_GFX1171,
    /* GFX12 (RDNA 4) */
    CHIP_GFX1200,        /* Radeon 9060 */
    CHIP_GFX1201,        /* Radeon 9070 */

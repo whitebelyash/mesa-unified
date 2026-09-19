@@ -927,8 +927,6 @@ Anvil(ANV) driver environment variables
 
   Accepts the following comma-separated list of flags:
 
-  ``bindless``
-    Forces all descriptor sets to use the internal :ref:`Bindless model`
   ``desc-dirty``
     Print out what dirties descriptors
   ``experimental``

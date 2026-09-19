@@ -1,5 +1,6 @@
 /*
  * Copyright © 2026 Amazon.com, Inc. or its affiliates.
+ * Copyright © 2026 NXP
  *
  * SPDX-License-Identifier: MIT
  */
@@ -7,6 +8,7 @@
 #include "pan_trace.h"
 
 #include "util/os_misc.h"
+#include "util/u_call_once.h"
 
 #define PAN_TRACE_ENV_VAR "PAN_CPU_TRACE"
 
@@ -70,8 +72,8 @@ is_separator(char c)
    return c == ',' || c == ';' || c == ' ';
 }
 
-void
-pan_trace_init(void)
+static void
+pan_trace_enable_categories(void)
 {
    const char *list = os_get_option(PAN_TRACE_ENV_VAR);
    const char *str = NULL;
@@ -99,4 +101,12 @@ pan_trace_init(void)
    }
 
    pan_trace_categories = categories;
+}
+
+void
+pan_trace_init(void)
+{
+   static util_once_flag once = UTIL_ONCE_FLAG_INIT;
+
+   util_call_once(&once, pan_trace_enable_categories);
 }

@@ -29,6 +29,9 @@ glx@glx-multithread-texture
 # glx-multithread-clearbuffer: ../src/util/u_queue.h:111: util_queue_fence_reset: Assertion `v == 0' failed.
 glx@glx-multithread-clearbuffer
 
+# in the fails list, but sometimes actually passes
+glx@glx-make-current
+
 # does not happen very often, but rarely does
 KHR-GL46.limits.max_fragment_interpolation_offset
 

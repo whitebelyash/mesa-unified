@@ -769,14 +769,6 @@ vk_image_usage_to_ahb_usage(const VkImageCreateFlags2KHR vk_create,
    if (vk_create & VK_IMAGE_CREATE_PROTECTED_BIT)
       ahb_usage |= AHARDWAREBUFFER_USAGE_PROTECTED_CONTENT;
 
-   /* XXX We need a better gralloc private query to forward the mutable bit
-    * along with the format list for a private vendor usage bit, and leave the
-    * decision to gralloc. For now, resolve mutable bit to CPU_WRITE_RARELY to
-    * implicitly force LINEAR.
-    */
-   if (vk_create & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT)
-      ahb_usage |= AHARDWAREBUFFER_USAGE_CPU_WRITE_RARELY;
-
    /* No usage bits set - set at least one GPU usage. */
    if (ahb_usage == 0)
       ahb_usage = AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE;

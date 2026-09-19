@@ -249,7 +249,7 @@ process_intel_debug_variable_once(void)
       debug_get_num_option("INTEL_DEBUG_BKP_AFTER_DRAW_COUNT", 0);
 
    intel_shader_dump_filter =
-      debug_get_num_option("INTEL_SHADER_DUMP_FILTER", 0);
+      debug_get_unsigned_option("INTEL_SHADER_DUMP_FILTER", 0);
 
    intel_debug_bkp_before_dispatch_count =
       debug_get_num_option("INTEL_DEBUG_BKP_BEFORE_DISPATCH_COUNT", 0);

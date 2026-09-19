@@ -151,9 +151,7 @@ tu_physical_device_get_format_properties(
       out_properties->optimalTilingFeatures = optimal;
       out_properties->bufferFeatures =
          VK_FORMAT_FEATURE_2_STORAGE_TEXEL_BUFFER_BIT |
-         VK_FORMAT_FEATURE_2_STORAGE_TEXEL_BUFFER_ATOMIC_BIT |
-         VK_FORMAT_FEATURE_TRANSFER_SRC_BIT |
-         VK_FORMAT_FEATURE_TRANSFER_DST_BIT;
+         VK_FORMAT_FEATURE_2_STORAGE_TEXEL_BUFFER_ATOMIC_BIT;
       return;
    }
 
@@ -167,10 +165,6 @@ tu_physical_device_get_format_properties(
    /* We never have to spill to memory for MSRTSS. */
    if (msrtss_out)
       msrtss_out->optimal = true;
-
-   /* We don't support BufferToImage/ImageToBuffer for npot formats */
-   if (!is_npot)
-      buffer |= VK_FORMAT_FEATURE_2_TRANSFER_SRC_BIT | VK_FORMAT_FEATURE_2_TRANSFER_DST_BIT;
 
    if (supported_vtx)
       buffer |= VK_FORMAT_FEATURE_2_VERTEX_BUFFER_BIT;

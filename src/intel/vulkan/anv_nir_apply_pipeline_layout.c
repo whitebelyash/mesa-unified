@@ -54,8 +54,6 @@ struct apply_pipeline_layout_state {
    struct anv_descriptor_set_layout * const *set_layouts;
    uint32_t set_count;
 
-   const uint32_t *dynamic_offset_start;
-
    nir_address_format ssbo_addr_format;
    nir_address_format ubo_addr_format;
 
@@ -365,18 +363,11 @@ build_res_index(nir_builder *b,
    assert(bind_layout->dynamic_offset_index < MAX_DYNAMIC_BUFFERS);
       nir_def *dynamic_offset_index;
       if (bind_layout->dynamic_offset_index >= 0) {
-         if (state->dynamic_offset_start == NULL) {
-            nir_def *dynamic_offset_start =
-               build_load_desc_set_dynamic_index(b, set);
-            dynamic_offset_index =
-               nir_iadd_imm(b, dynamic_offset_start,
-                            bind_layout->dynamic_offset_index);
-         } else {
-            dynamic_offset_index =
-               nir_imm_int(b,
-                           state->dynamic_offset_start[set] +
-                           bind_layout->dynamic_offset_index);
-         }
+         nir_def *dynamic_offset_start =
+            build_load_desc_set_dynamic_index(b, set);
+         dynamic_offset_index =
+            nir_iadd_imm(b, dynamic_offset_start,
+                         bind_layout->dynamic_offset_index);
       } else {
          dynamic_offset_index = nir_imm_int(b, 0xff); /* No dynamic offset */
       }
@@ -1143,25 +1134,19 @@ build_indirect_buffer_addr_for_res_index(nir_builder *b,
                                          nir_address_format addr_format,
                                          struct apply_pipeline_layout_state *state)
 {
-   struct res_index_defs res = unpack_res_index(b, res_index);
-
    nir_def *desc = build_load_descriptor_mem_from_res_index(
       b, res_index, 0, 4, 32, state);
 
    if (state->has_dynamic_buffers) {
+      struct res_index_defs res = unpack_res_index(b, res_index);
+
       /* This shader has dynamic offsets and we have no way of knowing
        * (save from the dynamic offset base index) if this buffer has a
        * dynamic offset.
        */
-      nir_def *dyn_offset_idx =
-         nir_iadd(b, res.dyn_offset_base, res.array_index);
-
-      nir_def *dyn_load =
-         anv_load_driver_uniform_indexed(b, 1, dynamic_offsets, dyn_offset_idx);
-
       nir_def *dynamic_offset =
-         nir_bcsel(b, nir_ieq_imm(b, res.dyn_offset_base, 0xff),
-                      nir_imm_int(b, 0), dyn_load);
+         build_buffer_dynamic_offset_for_res_index(
+            b, res.dyn_offset_base, res.array_index, state);
 
       /* The dynamic offset gets added to the base pointer so that we
        * have a sliding window range.
@@ -2217,7 +2202,8 @@ binding_should_use_surface_binding_table(const struct apply_pipeline_layout_stat
    if ((bind_layout->data & ANV_DESCRIPTOR_BTI_SURFACE_STATE) == 0)
       return false;
 
-   if (ANV_DEBUG(BINDLESS) && (bind_layout->data & ANV_DESCRIPTOR_SURFACE))
+   const bool always_bindless = state->pdevice->instance->drirc.features.always_bindless;
+   if (always_bindless && (bind_layout->data & ANV_DESCRIPTOR_SURFACE))
       return false;
 
    if (state->set[set].binding[binding].properties &
@@ -2234,7 +2220,8 @@ binding_should_use_sampler_binding_table(const struct apply_pipeline_layout_stat
    if ((binding->data & ANV_DESCRIPTOR_BTI_SAMPLER_STATE) == 0)
       return false;
 
-   if (ANV_DEBUG(BINDLESS) && (binding->data & ANV_DESCRIPTOR_SAMPLER))
+   const bool always_bindless = state->pdevice->instance->drirc.features.always_bindless;
+   if (always_bindless && (binding->data & ANV_DESCRIPTOR_SAMPLER))
       return false;
 
    return true;
@@ -2626,7 +2613,6 @@ anv_nir_apply_pipeline_layout(nir_shader *shader,
                               enum brw_robustness_flags robust_flags,
                               struct anv_descriptor_set_layout * const *set_layouts,
                               uint32_t set_count,
-                              const uint32_t *dynamic_offset_start,
                               bool device_bindable,
                               struct anv_pipeline_bind_map *map,
                               struct anv_pipeline_push_map *push_map,
@@ -2646,7 +2632,6 @@ anv_nir_apply_pipeline_layout(nir_shader *shader,
       .bind_map = map,
       .set_layouts = set_layouts,
       .set_count = set_count,
-      .dynamic_offset_start = dynamic_offset_start,
       .ssbo_addr_format = anv_nir_ssbo_addr_format(pdevice, robust_flags),
       .ubo_addr_format = anv_nir_ubo_addr_format(pdevice, robust_flags),
       .is_device_bindable = device_bindable,

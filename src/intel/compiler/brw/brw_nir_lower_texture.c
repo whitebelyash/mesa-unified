@@ -559,6 +559,9 @@ brw_nir_lower_mcs_fetch_instr(nir_builder *b, nir_tex_instr *tex, void *cb_data)
    unsigned n_mcs_sources = 0;
    for (uint32_t i = 0; i < tex->num_srcs; i++) {
       switch (tex->src[i].src_type) {
+      case nir_tex_src_sampler_offset:
+      case nir_tex_src_sampler_handle:
+      case nir_tex_src_sampler_deref:
       case nir_tex_src_texture_handle:
       case nir_tex_src_texture_offset:
       case nir_tex_src_texture_deref:
@@ -591,6 +594,9 @@ brw_nir_lower_mcs_fetch_instr(nir_builder *b, nir_tex_instr *tex, void *cb_data)
    uint32_t mcs_src = 0;
    for (uint32_t i = 0; i < tex->num_srcs; i++) {
       switch (tex->src[i].src_type) {
+      case nir_tex_src_sampler_offset:
+      case nir_tex_src_sampler_handle:
+      case nir_tex_src_sampler_deref:
       case nir_tex_src_texture_handle:
       case nir_tex_src_texture_offset:
       case nir_tex_src_texture_deref:

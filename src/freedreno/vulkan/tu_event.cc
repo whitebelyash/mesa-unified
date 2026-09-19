@@ -149,18 +149,8 @@ tu_CmdWaitEvents2(VkCommandBuffer commandBuffer,
    VK_FROM_HANDLE(tu_cmd_buffer, cmd, commandBuffer);
    struct tu_cs *cs = cmd->state.pass ? &cmd->draw_cs : &cmd->cs;
 
-   bool skip_barrier = true;
-
    for (uint32_t i = 0; i < eventCount; i++) {
       VK_FROM_HANDLE(tu_event, event, pEvents[i]);
-
-      /* If the dependency info in CmdSetEvent is the same, we can rely on all
-       * flushes/invalidates landing by the time the event is signalled.
-       * Otherwise, we have to do a full pipeline barrier.
-       */
-      if (pDependencyInfos->dependencyFlags &
-          VK_DEPENDENCY_ASYMMETRIC_EVENT_BIT_KHR)
-         skip_barrier = false;
 
       /* If concurrent binning is enabled, and the dstStage includes vertex
        * stages, make BV also wait for the event.
@@ -186,9 +176,14 @@ tu_CmdWaitEvents2(VkCommandBuffer commandBuffer,
 
       if (wait_bv)
          tu7_set_thread_br_patchpoint(cmd, cs, false);
-   }
 
-   if (!skip_barrier)
-      tu_barrier(cmd, eventCount, pDependencyInfos, false);
+      /* If the dependency info in CmdSetEvent is the same, we can rely on all
+       * flushes/invalidates landing by the time the event is signalled.
+       * Otherwise, we have to do a full pipeline barrier.
+       */
+      if (pDependencyInfos[i].dependencyFlags &
+          VK_DEPENDENCY_ASYMMETRIC_EVENT_BIT_KHR)
+         tu_barrier(cmd, 1, &pDependencyInfos[i], false);
+   }
 }
 TU_GENX(tu_CmdWaitEvents2);

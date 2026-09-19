@@ -99,6 +99,7 @@ convert_def(nir_builder *b, nir_def *def, convert_address_format_state *state)
          case nir_intrinsic_load_deref:
          case nir_intrinsic_load_deref_block_intel:
          case nir_intrinsic_deref_buffer_array_length:
+         case nir_intrinsic_deref_buffer_address:
          case nir_intrinsic_deref_mode_is:
          case nir_intrinsic_launch_mesh_workgroups_with_payload_deref:
             /* These support any address format. */

@@ -353,9 +353,3 @@ android-dEQP-VK.pipeline.fast_linked_library.stencil.nocolor.format.d24_unorm_s8
 android-dEQP-VK.pipeline.fast_linked_library.stencil.nocolor.format.s8_uint.states.fail_repl.pass_decw.dfail_inv.comp_never.any
 android-dEQP-VK.pipeline.pipeline_library.stencil.nocolor.format.d32_sfloat_s8_uint_separate_layouts.states.fail_incc.pass_decw.dfail_keep.comp_never.any
 android-dEQP-VK.renderpasses.renderpass1.dedicated_allocation.formats.r16g16_uint.input.clear.dont_care.self_dep_draw_use_input_aspect_ms
-
-# See this entry in the VKCTS 1.4.4.2 -> 1.4.5.3 uprev fails list.
-dEQP-VK.*.custom_resolve.*.fdm_subsampled
-
-# See this entry in the VKCTS 1.4.5.3 -> 1.4.6.1 uprev fails list.
-dEQP-VK.*.custom_resolve.*.fdm_nonsubsampled

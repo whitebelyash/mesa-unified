@@ -587,6 +587,7 @@ struct radv_cmd_buffer {
        *          The follower writes the value, and the leader waits.
        */
       struct {
+         struct radeon_winsys_bo *bo;     /* Buffer object of the semaphore (if separate) */
          uint64_t va;                     /* Virtual address of the semaphore. */
          uint32_t leader_value;           /* Current value of the leader. */
          uint32_t emitted_leader_value;   /* Last value emitted by the leader. */
@@ -845,7 +846,6 @@ struct radv_vbo_info {
    uint32_t size;
 
    uint32_t attrib_offset;
-   uint32_t attrib_index_offset;
    uint32_t attrib_format_size;
 
    uint32_t non_trivial_format;

@@ -503,6 +503,8 @@ vn_queue_submission_init_pnext(struct vn_queue_submission *submit)
          cur = next;
       }
    }
+
+   cur->pNext = NULL;
 }
 
 static void

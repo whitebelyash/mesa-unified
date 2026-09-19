@@ -1135,7 +1135,7 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
          break;
       }
 
-      const bool save_fp_math_ctrl = b->nb.fp_math_ctrl;
+      const unsigned save_fp_math_ctrl = b->nb.fp_math_ctrl;
 
       b->nb.fp_math_ctrl |= extra_fp_math_ctrl;
 

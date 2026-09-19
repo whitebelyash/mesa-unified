@@ -305,6 +305,9 @@ struct fd_dev_info {
       /* A702 cuts A LOT of things.. */
       bool is_a702;
 
+      /* Number of transform feedback streams supported. */
+      uint32_t num_xfb_streams;
+
       /* maximum number of descriptor sets */
       uint32_t max_sets;
 

@@ -325,7 +325,17 @@ int si_shader_binary_upload_at(struct si_screen *sscreen, struct si_shader *shad
       r = upload_binary_raw(sscreen, shader, scratch_va, dma_upload, bo_offset);
    }
 
-   shader->config.lds_size = si_calculate_needed_lds_size(sscreen->info.gfx_level, shader);
+   /* For compute/task/mesh with ACO, shader->config.lds_size is more accurate
+    * because ACO can spill using LDS. For other stages with ACO, it might be
+    * too low because ac_ngg_subgroup_info/ac_legacy_gs_subgroup_info is
+    * only initialized after compilation in si_create_shader_variant(). LLVM
+    * doesn't set shader->config.lds_size and also doesn't spill to LDS.
+    *
+    * We can select between the two depending on the stage and backend, or just
+    * MAX2() them.
+    */
+   unsigned lds_size = si_calculate_needed_lds_size(sscreen->info.gfx_level, shader);
+   shader->config.lds_size = MAX2(shader->config.lds_size, lds_size);
 
    return r;
 }

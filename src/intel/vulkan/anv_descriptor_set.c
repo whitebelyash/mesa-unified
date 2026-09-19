@@ -448,7 +448,7 @@ anv_descriptor_requires_bindless(const struct anv_physical_device *pdevice,
                                  const struct anv_descriptor_set_layout *set,
                                  const struct anv_descriptor_set_binding_layout *binding)
 {
-   if (ANV_DEBUG(BINDLESS))
+   if (pdevice->instance->drirc.features.always_bindless)
       return anv_descriptor_supports_bindless(pdevice, set, binding);
 
    if (set->vk.flags & VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT)

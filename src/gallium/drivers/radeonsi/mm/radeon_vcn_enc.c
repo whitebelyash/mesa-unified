@@ -685,7 +685,8 @@ static void radeon_vcn_enc_hevc_get_dbk_param(struct radeon_encoder *enc,
       enc->enc_pic.hevc_deblock.cr_qp_offset = pic->pic.pps_cr_qp_offset;
    }
 
-   if (pic->pic.pps_loop_filter_across_slices_enabled_flag &&
+   if (enc->enc_pic.hevc_per_slice_loop_filter &&
+       pic->pic.pps_loop_filter_across_slices_enabled_flag &&
        (!enc->enc_pic.hevc_deblock.disable_sao ||
         !enc->enc_pic.hevc_deblock.deblocking_filter_disabled)) {
       enc->enc_pic.hevc_deblock.loop_filter_across_slices_enabled =
@@ -1167,8 +1168,6 @@ static void radeon_vcn_enc_av1_get_param(struct radeon_encoder *enc,
 
 static void radeon_vcn_enc_get_param(struct radeon_encoder *enc, struct pipe_picture_desc *picture)
 {
-   enc->enc_pic.enc_params.allowed_max_bitstream_size = enc->bs_size - enc->bs_offset;
-
    if (u_reduce_video_profile(picture->profile) == PIPE_VIDEO_FORMAT_MPEG4_AVC)
       radeon_vcn_enc_h264_get_param(enc, (struct pipe_h264_enc_picture_desc *)picture);
    else if (u_reduce_video_profile(picture->profile) == PIPE_VIDEO_FORMAT_HEVC)
@@ -1875,6 +1874,7 @@ static void radeon_enc_encode_bitstream(struct pipe_video_codec *encoder,
 
    enc->fb->data = radeon_vcn_enc_encode_headers(enc);
    enc->fb->max_bitstream_size = enc->bs_size - enc->bs_offset;
+   enc->enc_pic.enc_params.allowed_max_bitstream_size = enc->fb->max_bitstream_size;
 
    if (vid_buf->base.statistics_data) {
       enc->get_buffer(vid_buf->base.statistics_data, &enc->stats, NULL);
@@ -2277,21 +2277,34 @@ struct pipe_video_codec *radeon_create_encoder(struct pipe_context *context,
           (sscreen->info.vcn_enc_minor_version == 8 &&
            sscreen->info.vcn_fw_revision >= 6))
          enc->enc_pic.av1_unidir_rc_available = true;
+      enc->enc_pic.hevc_per_slice_loop_filter = true;
    }
    else if (sscreen->info.vcn_ip_version >= VCN_4_0_0) {
       if (sscreen->info.vcn_enc_minor_version >= 1)
          enc->enc_pic.use_rc_per_pic_ex = true;
       radeon_enc_4_0_init(enc);
+      if (sscreen->info.vcn_enc_minor_version > 19 ||
+          (sscreen->info.vcn_enc_minor_version == 19 &&
+           sscreen->info.vcn_fw_revision >= 5))
+         enc->enc_pic.hevc_per_slice_loop_filter = true;
    }
    else if (sscreen->info.vcn_ip_version >= VCN_3_0_0) {
       if (sscreen->info.vcn_enc_minor_version >= 29)
          enc->enc_pic.use_rc_per_pic_ex = true;
       radeon_enc_3_0_init(enc);
+      if (sscreen->info.vcn_enc_minor_version > 30 ||
+          (sscreen->info.vcn_enc_minor_version == 30 &&
+           sscreen->info.vcn_fw_revision >= 3))
+         enc->enc_pic.hevc_per_slice_loop_filter = true;
    }
    else if (sscreen->info.vcn_ip_version >= VCN_2_0_0) {
       if (sscreen->info.vcn_enc_minor_version >= 18)
          enc->enc_pic.use_rc_per_pic_ex = true;
       radeon_enc_2_0_init(enc);
+      if (sscreen->info.vcn_enc_minor_version > 21 ||
+          (sscreen->info.vcn_enc_minor_version == 21 &&
+           sscreen->info.vcn_fw_revision >= 1))
+         enc->enc_pic.hevc_per_slice_loop_filter = true;
    }
    else {
       if (sscreen->info.vcn_enc_minor_version >= 15)

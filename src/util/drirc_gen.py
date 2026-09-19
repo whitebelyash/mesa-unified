@@ -131,7 +131,7 @@ class DrircEnum(DrircOption):
         self.value = value
         self.min_value = min_value
         self.max_value = max_value
-        self.c_args = [f"{value}", f"{min_value}", f"{min_value}", f"\"{self.description}\""]
+        self.c_args = [f"{value}", f"{min_value}", f"{max_value}", f"\"{self.description}\""]
         vals = []
         for v in values:
             vals.append(f"DRI_CONF_ENUM({v.value}, \"{v.description}\")")

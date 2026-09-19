@@ -621,6 +621,15 @@ st_link_glsl_to_nir(struct gl_context *ctx,
          prog->info.inputs_read = prog->nir->info.inputs_read;
          prog->DualSlotInputs = prog->nir->info.dual_slot_inputs;
 
+         /* prog->info.inputs_read is the ABI between the gallium driver and the
+          * state tracker, and it is communicated via I/O bases. Recompute bases
+          * now that we've commited to the inputs_read mask to match. This needs
+          * to happen at the last possible moment, because dead code elimination
+          * enabled by complex optimizations can cause inputs_read to change
+          * very late in the compile. Doing it here is the robust choice.
+          */
+         nir_recompute_io_bases(prog->nir, nir_var_shader_in);
+
          /* Initialize st_vertex_program members. */
          st_prepare_vertex_program(prog);
       }

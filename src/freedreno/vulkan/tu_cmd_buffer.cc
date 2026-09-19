@@ -3815,6 +3815,9 @@ tu_emit_subsampled(struct tu_cmd_buffer *cmd,
 {
    struct tu_cs *cs = &cmd->cs;
 
+   if (cmd->state.rp.shared_viewport)
+      fdm_offsets = NULL;
+
    for (unsigned i = 0; i < cmd->state.pass->attachment_count; i++) {
       if (i != cmd->state.pass->fragment_density_map.attachment &&
           (cmd->state.pass->attachments[i].store || cmd->state.pass->attachments[i].store_stencil)) {
@@ -7071,11 +7074,51 @@ tu_CmdBeginRenderPass2(VkCommandBuffer commandBuffer,
                              &cmd->state.vk_mv,
                              pass, cmd->state.subpass);
    tu_renderpass_begin(cmd);
-   tu_emit_subpass_begin<CHIP>(cmd);
 
    cmd->patchpoints_ctx = ralloc_context(NULL);
+
+   tu_emit_subpass_begin<CHIP>(cmd);
 }
 TU_GENX(tu_CmdBeginRenderPass2);
+
+template <chip CHIP>
+static void
+tu_emit_rendering_attachment_locations(struct tu_cmd_buffer *cmd)
+{
+   tu6_emit_mrt<CHIP>(cmd, cmd->state.subpass, &cmd->draw_cs);
+   tu6_emit_render_cntl<CHIP>(cmd, cmd->state.subpass, &cmd->draw_cs, false);
+
+   bool skips_att = false;
+   for (unsigned i = 0; i < cmd->state.subpass->color_count; i++) {
+      if (cmd->state.subpass->color_attachments[i].attachment == VK_ATTACHMENT_UNUSED)
+         continue;
+
+      if (cmd->vk.dynamic_graphics_state.cal.color_map[i] == MESA_VK_ATTACHMENT_UNUSED) {
+         skips_att = true;
+         break;
+      }
+   }
+
+   /* Same case as a drawcall not writing to some color attachments. */
+   if (skips_att && cmd->state.lrz.valid && !cmd->state.lrz.disable_write_for_rp) {
+      tu_lrz_disable_write_for_rp(cmd, "CmdSetRenderingAttachmentLocations with skipped color attachments");
+      cmd->state.dirty |= TU_CMD_DIRTY_LRZ;
+   }
+
+   /* Because this is just a remapping and not a different "reference", there
+    * doesn't need to be a barrier between accesses to the same attachment
+    * with a different index. This is different from "classic" renderpasses.
+    * Before a7xx the CCU includes the render target ID in the cache location
+    * calculation, so we need to manually flush/invalidate color CCU here
+    * since the same render target/attachment may be in a different location.
+    */
+   if (cmd->device->physical_device->info->chip == 6) {
+      struct tu_cache_state *cache = &cmd->state.renderpass_cache;
+      tu_flush_for_access(cache, TU_ACCESS_CCU_COLOR_INCOHERENT_WRITE,
+                          TU_ACCESS_CCU_COLOR_INCOHERENT_WRITE);
+      cache->flush_bits |= TU_CMD_FLAG_WAIT_FOR_IDLE;
+   }
+}
 
 template <chip CHIP>
 VKAPI_ATTR void VKAPI_CALL
@@ -7196,6 +7239,12 @@ tu_CmdBeginRendering(VkCommandBuffer commandBuffer,
    };
    vk_cmd_set_rendering_attachment_locations(&cmd->vk, &ral_info);
 
+   const VkRenderingInputAttachmentIndexInfoKHR rial_info = {
+      .sType = VK_STRUCTURE_TYPE_RENDERING_INPUT_ATTACHMENT_INDEX_INFO_KHR,
+      .colorAttachmentCount = pRenderingInfo->colorAttachmentCount,
+   };
+   vk_common_CmdSetRenderingInputAttachmentIndicesKHR(commandBuffer, &rial_info);
+
    a = cmd->dynamic_subpasses[0].fsr_attachment;
    if (a != VK_ATTACHMENT_UNUSED) {
       const VkRenderingFragmentShadingRateAttachmentInfoKHR *fsr_info =
@@ -7267,6 +7316,10 @@ tu_CmdBeginRendering(VkCommandBuffer commandBuffer,
 
    if (!resuming) {
       tu_emit_subpass_begin<CHIP>(cmd);
+   } else {
+      /* Even resuming vkCmdBeginRendering resets RT and input attachment locations, so we have to re-emit them. */
+      tu_emit_rendering_attachment_locations<CHIP>(cmd);
+      tu_set_input_attachments<CHIP>(cmd, cmd->state.subpass);
    }
 
    if (suspending && !resuming) {
@@ -7301,30 +7354,7 @@ tu_CmdSetRenderingAttachmentLocationsKHR(
 
    vk_common_CmdSetRenderingAttachmentLocationsKHR(commandBuffer, pLocationInfo);
 
-   tu6_emit_mrt<CHIP>(cmd, cmd->state.subpass, &cmd->draw_cs);
-   tu6_emit_render_cntl<CHIP>(cmd, cmd->state.subpass, &cmd->draw_cs, false);
-
-   /* Same case as a drawcall not writing to some color attachments, but not
-    * trying to make LRZ work in cases where we can prove that LRZ can work.
-    */
-   if (cmd->state.lrz.valid && !cmd->state.lrz.disable_write_for_rp) {
-      tu_lrz_disable_write_for_rp(cmd, "CmdSetRenderingAttachmentLocations");
-      cmd->state.dirty |= TU_CMD_DIRTY_LRZ;
-   }
-
-   /* Because this is just a remapping and not a different "reference", there
-    * doesn't need to be a barrier between accesses to the same attachment
-    * with a different index. This is different from "classic" renderpasses.
-    * Before a7xx the CCU includes the render target ID in the cache location
-    * calculation, so we need to manually flush/invalidate color CCU here
-    * since the same render target/attachment may be in a different location.
-    */
-   if (cmd->device->physical_device->info->chip == 6) {
-      struct tu_cache_state *cache = &cmd->state.renderpass_cache;
-      tu_flush_for_access(cache, TU_ACCESS_CCU_COLOR_INCOHERENT_WRITE,
-                          TU_ACCESS_CCU_COLOR_INCOHERENT_WRITE);
-      cache->flush_bits |= TU_CMD_FLAG_WAIT_FOR_IDLE;
-   }
+   tu_emit_rendering_attachment_locations<CHIP>(cmd);
 }
 TU_GENX(tu_CmdSetRenderingAttachmentLocationsKHR);
 
@@ -7381,8 +7411,14 @@ tu_CmdSetRenderingInputAttachmentIndicesKHR(
    }
 
    subpass->input_count = input_count;
+   /* input_attachments point to the same cmd_buffer->dynamic_input_attachments for main and custom resolve subpasses,
+    * while input_count needs to be explicitly set for both.
+    */
+   if (cmd->dynamic_pass.subpass_count > 1) {
+      cmd->dynamic_subpasses[1].input_count = input_count;
+   }
 
-   tu_set_input_attachments<CHIP>(cmd, subpass);
+   tu_set_input_attachments<CHIP>(cmd, cmd->state.subpass);
 }
 TU_GENX(tu_CmdSetRenderingInputAttachmentIndicesKHR);
 
@@ -9181,6 +9217,11 @@ tu_CmdDrawIndirectByteCountEXT(VkCommandBuffer commandBuffer,
        * the vertexStride should also be in units of dwords.
        */
       vertexStride = vertexStride >> 2;
+   } else {
+      /* On a6xx only the offset is shifted right by 2, so scale it up to
+       * match the byte counter and stride.
+       */
+      counterOffset = counterOffset << 2;
    }
    tu_cs_emit(cs, instanceCount);
    tu_cs_emit_qw(cs, vk_buffer_address(&buf->vk, counterBufferOffset));
@@ -10019,11 +10060,11 @@ tu_barrier(struct tu_cmd_buffer *cmd,
    }
 
    if (cmd->state.pass) {
-      const VkPipelineStageFlags framebuffer_space_stages =
-         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
-         VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
-         VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT |
-         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+      const VkPipelineStageFlags2 framebuffer_space_stages =
+         VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT |
+         VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
+         VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT |
+         VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 
       /* We cannot have non-by-region "fb-space to fb-space" barriers.
        *

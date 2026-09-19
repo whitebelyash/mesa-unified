@@ -2574,7 +2574,7 @@ anv_physical_device_init_uuids(struct anv_physical_device *device)
    _mesa_blake3_init(&blake3_ctx);
    _mesa_blake3_update(&blake3_ctx, build_id_data(note), build_id_len);
    brw_device_blake3_update(&blake3_ctx, &device->info);
-   bool always_use_bindless = ANV_DEBUG(BINDLESS);
+   bool always_use_bindless = device->instance->drirc.features.always_bindless;
    _mesa_blake3_update(&blake3_ctx, &always_use_bindless,
                      sizeof(always_use_bindless));
    _mesa_blake3_final(&blake3_ctx, blake3);

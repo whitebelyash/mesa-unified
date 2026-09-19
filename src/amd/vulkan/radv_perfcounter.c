@@ -218,6 +218,7 @@ enum {
 enum {
    TCP_PERF_SEL_REQ_GFX10 = CTR(TCP, 0x9),
    TCP_PERF_SEL_REQ_MISS_GFX10 = CTR(TCP, 0x12),
+   TCP_PERF_SEL_REQ_MISS_GFX11 = CTR(TCP, 0x11),
 };
 
 #define CTR_NUM_SIMD CONSTANT(pdev->info.compiler_info.num_simd_per_compute_unit * pdev->info.num_cu)
@@ -305,8 +306,14 @@ radv_query_perfcounter_descs(struct radv_physical_device *pdev, uint32_t *count,
              CONSTANT(32), CONSTANT(0), CONSTANT(0), CONSTANT(0), CONSTANT(0));
    }
 
-   ADD_PC(RADV_PC_OP_REVERSE_RATIO, BYTES, "L0 cache hit ratio", "Memory", "Hit ratio of L0 cache", L0_CACHE_HIT_RATIO,
-          TCP_PERF_SEL_REQ_MISS_GFX10, TCP_PERF_SEL_REQ_GFX10);
+   if (pdev->info.gfx_level >= GFX11) {
+      ADD_PC(RADV_PC_OP_REVERSE_RATIO, BYTES, "L0 cache hit ratio", "Memory", "Hit ratio of L0 cache",
+             L0_CACHE_HIT_RATIO, TCP_PERF_SEL_REQ_MISS_GFX11, TCP_PERF_SEL_REQ_GFX10);
+   } else {
+      ADD_PC(RADV_PC_OP_REVERSE_RATIO, BYTES, "L0 cache hit ratio", "Memory", "Hit ratio of L0 cache",
+             L0_CACHE_HIT_RATIO, TCP_PERF_SEL_REQ_MISS_GFX10, TCP_PERF_SEL_REQ_GFX10);
+   }
+
    ADD_PC(RADV_PC_OP_REVERSE_RATIO, BYTES, "L1 cache hit ratio", "Memory", "Hit ratio of L1 cache", L1_CACHE_HIT_RATIO,
           GL1C_PERF_SEL_REQ_MISS, GL1C_PERF_SEL_REQ);
    if (pdev->info.gfx_level >= GFX10_3) {

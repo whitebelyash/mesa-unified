@@ -38,7 +38,15 @@
 #define VMW_MAX_BUFFER_SIZE (512*1024*1024)
 
 struct pb_manager;
-struct vmw_region;
+struct vmw_region
+{
+   uint32_t handle;
+   uint64_t map_handle;
+   void *data;
+   uint32_t map_count;
+   int drm_fd;
+   uint32_t size;
+};
 
 struct vmw_cap_3d {
    bool has_cap;
@@ -66,6 +74,7 @@ struct vmw_winsys_screen
       bool have_drm_2_18;
       bool have_drm_2_19;
       bool have_drm_2_20;
+      bool have_drm_2_21;
    } ioctl;
 
    struct {

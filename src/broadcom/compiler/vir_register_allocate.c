@@ -568,6 +568,36 @@ v3d_emit_spill_tmua(struct v3d_compile *c,
         }
 }
 
+/* An unconditional write with no output pack fully defines the register;
+ * conditional writes and D.l/D.h packs preserve the bits they don't write.
+ */
+static bool
+qinst_writes_full_dst(struct qinst *inst)
+{
+        return vir_get_cond(inst) == V3D_QPU_COND_NONE &&
+               inst->qpu.alu.add.output_pack == V3D_QPU_PACK_NONE &&
+               inst->qpu.alu.mul.output_pack == V3D_QPU_PACK_NONE;
+}
+
+/* Fill the spill slot value into the replacement temp of a partial write
+ * so it is fully defined: otherwise it is live-in at the def (and
+ * unspillable), and the full-register spill store would write undefined
+ * bits over valid slot data.
+ */
+static void
+v3d_emit_fill_for_partial_write(struct v3d_compile *c,
+                                struct qreg temp,
+                                struct qinst *before,
+                                uint32_t spill_offset)
+{
+        struct qreg fill;
+        c->cursor = vir_before_inst(before);
+        v3d_emit_spill_tmua(c, spill_offset, V3D_QPU_COND_NONE,
+                            before->ip, &fill);
+        c->fills++;
+        vir_MOV_dest(c, temp, fill);
+}
+
 static void
 v3d_emit_tmu_spill(struct v3d_compile *c,
                    struct qinst *inst,
@@ -592,6 +622,30 @@ v3d_emit_tmu_spill(struct v3d_compile *c,
                 uint8_t class_bits = get_temp_class_bits(c, inst->dst.index);
                 inst->dst = vir_get_temp(c);
                 add_node(c, inst->dst.index, class_bits);
+
+                /* A conditional write keeps its conditional store, so the
+                 * slot data stays valid without a fill. The exception are
+                 * packed writes, since those only write 16-bit of each
+                 * 32-bit lane, leaving the other 16-bit possibly undefined,
+                 * so we emit a fill to make sure we have fully defined
+                 * lanes before emitting the spill.
+                 *
+                 * FIXME: We only really need to do this if we can tell that
+                 * the unwritten parts of the register have valid data in
+                 * memory from a previous spill.
+                 *
+                 * For the postponed spill path we don't have to do this
+                 * because we have already emitted the fill if needed before
+                 * calling here.
+                 */
+                if (inst->qpu.alu.add.output_pack != V3D_QPU_PACK_NONE ||
+                    inst->qpu.alu.mul.output_pack != V3D_QPU_PACK_NONE) {
+                        v3d_emit_fill_for_partial_write(c, inst->dst, inst,
+                                                        spill_offset);
+                        c->cursor = vir_after_inst(position);
+
+                        cond = V3D_QPU_COND_NONE;
+                }
         } else {
                 inst->dst = spill_temp;
 
@@ -786,12 +840,48 @@ v3d_spill_reg(struct v3d_compile *c, int *acc_nodes, int *implicit_rf_nodes,
                                                                 postponed_spill_temp;
                                                 }
                                                 if (!postponed_spill ||
-                                                    vir_get_cond(inst) == V3D_QPU_COND_NONE) {
+                                                    qinst_writes_full_dst(inst)) {
                                                         postponed_spill_temp =
                                                                 vir_get_temp(c);
                                                         add_node(c,
                                                                  postponed_spill_temp.index,
                                                                  c->nodes.info[spill_node].class_bits);
+
+                                                        /* If we have a partial write we emit a fill
+                                                         * into the spill temp to ensure the value is
+                                                         * fully defined after the partial write, which
+                                                         * will help RA and will ensure that the spill
+                                                         * writes a fully defined value to memory, since
+                                                         * otherwise it would possibly write garbage
+                                                         * from unwritten lanes. This is necessary
+                                                         * because a postponed spill may aggregate
+                                                         * multiple writes which each may be partial or
+                                                         * full, so we will always emit a full spill of
+                                                         * the register and thus need to ensure we are
+                                                         * not clobbering valid data. Also, with output
+                                                         * packs, we only ever partially write the
+                                                         * lanes, so this ensures the full 32-bit per
+                                                         * lane are valid.
+                                                         *
+                                                         * FIXME: we only really need to do this if we
+                                                         * can tell that the parts of the spill
+                                                         * register that are not being written with
+                                                         * this instruction will overwrite valid data
+                                                         * in memory, which would only be the case if
+                                                         * those parts had been spilled earlier in the
+                                                         * program.
+                                                         *
+                                                         * Since we are in the middle of a TMU
+                                                         * sequence, we emit the fill right before the
+                                                         * TMU sequence start.
+                                                         */
+                                                        if (!qinst_writes_full_dst(inst)) {
+                                                                v3d_emit_fill_for_partial_write(
+                                                                        c,
+                                                                        postponed_spill_temp,
+                                                                        start_of_tmu_sequence,
+                                                                        spill_offset);
+                                                        }
                                                 }
                                                 postponed_spill = inst;
                                         } else {

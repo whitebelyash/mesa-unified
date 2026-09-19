@@ -6,7 +6,6 @@
 #include "anv_api_version.h"
 
 static const struct debug_control debug_control[] = {
-   { "bindless",                  ANV_DEBUG_BINDLESS},
    { "desc-dirty",                ANV_DEBUG_DESCRIPTOR_DIRTY},
    { "dgc-dump",                  ANV_DEBUG_DGC_DUMP},
    { "experimental",              ANV_DEBUG_EXPERIMENTAL},

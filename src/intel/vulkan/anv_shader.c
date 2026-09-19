@@ -37,7 +37,7 @@ anv_device_finish_shader_dump(struct anv_device *device)
    if (!ANV_DEBUG(SHADER_DUMP) && !INTEL_DEBUG(DEBUG_SHADERS_LINENO))
       return;
 
-   debug_archiver_finish_file(device->shader_dump.archive);
+   debug_archiver_close(device->shader_dump.archive);
 
    simple_mtx_destroy(&device->shader_dump.mutex);
 }

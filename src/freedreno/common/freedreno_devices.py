@@ -135,6 +135,7 @@ a6xx_base = GPUProps(
         has_fs_tex_prefetch = True,
         has_sampler_minmax = True,
         has_astc_hdr = True,
+        num_xfb_streams = 4,
 
         supports_double_threadsize = True,
 
@@ -169,6 +170,7 @@ a6xx_gen1_low = GPUProps(
         has_sampler_minmax = False,
         has_astc_hdr = False,
         has_fs_tex_prefetch = False,
+        num_xfb_streams = 1,
         sysmem_per_ccu_color_cache_size = 8 * 1024,
         sysmem_per_ccu_depth_cache_size = 8 * 1024,
         gmem_ccu_color_cache_fraction = CCUColorCacheFraction.HALF.value,
@@ -777,6 +779,7 @@ a7xx_base = GPUProps(
         has_fs_tex_prefetch = True,
         has_sampler_minmax = True,
         has_astc_hdr = True,
+        num_xfb_streams = 4,
 
         supports_double_threadsize = True,
 

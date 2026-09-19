@@ -37,7 +37,7 @@
 static uint8_t
 nvk_cmd_buffer_subchannel_mask(struct nvk_cmd_buffer *cmd);
 
-static void
+void
 nvk_descriptor_state_fini(struct nvk_cmd_buffer *cmd,
                           struct nvk_descriptor_state *desc)
 {

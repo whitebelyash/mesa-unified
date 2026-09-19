@@ -232,6 +232,7 @@ nvk_meta_end_compute(struct nvk_cmd_buffer *cmd,
    struct nv_push *p = nvk_cmd_buffer_push(cmd, 1);
    P_IMMD_WORD(p, NV90C0, SET_RENDER_ENABLE_OVERRIDE, MODE_USE_RENDER_ENABLE);
 
+   nvk_descriptor_state_fini(cmd, &cmd->state.cs.descriptors);
    cmd->state.cs = save->state;
 }
 

@@ -2394,10 +2394,16 @@ panfrost_ptr_unmap(struct pipe_context *pctx, struct pipe_transfer *transfer)
                panfrost_resource_setup(screen, prsrc, DRM_FORMAT_MOD_LINEAR,
                                        prsrc->image.props.format, 0);
 
-               /* converting the resource from tiled to linear and back
-                * shouldn't increase memory usage...
-                */
-               assert(prsrc->plane.layout.data_size_B <= panfrost_bo_size(bo));
+               if (prsrc->plane.layout.data_size_B > panfrost_bo_size(bo)) {
+                  struct panfrost_bo *newbo = panfrost_bo_create(
+                     dev, prsrc->plane.layout.data_size_B, 0, bo->label);
+
+                  assert(newbo);
+                  panfrost_bo_unreference(prsrc->bo);
+                  prsrc->bo = newbo;
+                  prsrc->plane.base = newbo->ptr.gpu;
+                  bo = newbo;
+               }
 
                util_copy_rect(
                   bo->ptr.cpu + prsrc->plane.layout.slices[0].offset_B,

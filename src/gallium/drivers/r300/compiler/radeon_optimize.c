@@ -1372,7 +1372,8 @@ copy_propagate_constant_swizzle(struct radeon_compiler *c, struct rc_instruction
             }
             struct rc_src_register new_src = cur->U.I.SrcReg[src];
             new_src.Swizzle = new_swizzle;
-            new_src.Negate ^= negate;
+            if (!new_src.Abs)
+               new_src.Negate ^= negate;
             if (!c->SwizzleCaps->IsNative(cur->U.I.Opcode, new_src))
                continue;
 

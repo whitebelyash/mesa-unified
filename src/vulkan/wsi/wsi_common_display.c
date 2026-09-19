@@ -296,10 +296,10 @@ wsi_display_parse_edid(struct wsi_display_connector *connector, drmModePropertyB
 
    char *make = di_info_get_make(info);
    char *model = di_info_get_model(info);
-   if (make && model) {
+   /* Per the spec, the name lives as long as the display, so allocate once. */
+   if (make && model && !metadata->display_name) {
       /* make + space + model + null terminator */
       int display_name_size = strlen(make) + strlen(model) + 2;
-      /* Per the spec, this string remains valid for the lifetime of the VkDisplayKHR. */
       metadata->display_name = vk_zalloc(connector->wsi->alloc,
             display_name_size, 8,
             VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
@@ -3502,6 +3502,7 @@ wsi_display_surface_create_swapchain(
                                       create_info,
                                       drm_format,
                                       &chain->images[image]);
+      const bool image_inited = result == VK_SUCCESS;
 
       /* Check that we could actually possibly atomic commit to this plane. This
        * catches cases where the swapchain exceeds some limits of the hardware
@@ -3525,6 +3526,9 @@ wsi_display_surface_create_swapchain(
       }
 
       if (result != VK_SUCCESS) {
+         if (image_inited)
+            wsi_display_image_finish(&chain->base, &chain->images[image]);
+
          while (image > 0) {
             --image;
             wsi_display_image_finish(&chain->base,
